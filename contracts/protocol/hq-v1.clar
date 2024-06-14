@@ -13,6 +13,7 @@
 (define-constant ERR_INACTIVE_CONTRACT (err u1006))
 (define-constant ERR_NO_ENTRY (err u1007))
 (define-constant ERR_ACTIVATION (err u1008))
+(define-constant ERR_SAFEGUARD_DISABLED (err u1009))
 
 (define-constant activation-delay u1008) ;; burn-block-height
 
@@ -23,6 +24,7 @@
 (define-data-var contracts-enabled bool true)
 (define-data-var minting-enabled bool true)
 
+(define-data-var safeguard-owner-enabled bool false)
 ;;-------------------------------------
 ;; Maps 
 ;;-------------------------------------
@@ -220,7 +222,9 @@
 (define-public (remove-owner (address principal))
   (begin
     (try! (check-is-owner tx-sender))
+    (asserts! (var-get safeguard-owner-enabled) ERR_SAFEGUARD_DISABLED)
     (map-delete owners { address: address })
+    (var-set safeguard-owner-enabled false)
     (ok true)
   )
 )
@@ -233,6 +237,7 @@
     (try! (check-is-owner tx-sender))
     (asserts! (>= burn-block-height (+ owner-block-height activation-delay)) ERR_ACTIVATION)
     (map-set owners { address: address } (merge owner-entry { active: true }))
+    (var-set safeguard-owner-enabled true)
     (ok true)
   )
 )
