@@ -307,5 +307,4 @@
 (map-set contracts { address: .minting-otc } { active: true })
 (map-set contracts { address: .controller } { active: true })
 (map-set contracts { address: .staking } { active: true })
-(map-set contracts { address: .staking-reserve } { active: true })
 (map-set contracts { address: .recover } { active: true })
