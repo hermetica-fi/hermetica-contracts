@@ -214,19 +214,23 @@
 (define-public (request-owner-update (next-owner principal))
   (begin
     (try! (check-is-owner tx-sender))
-    (merge (var-get owner) { next-owner: next-owner, block-height: (some burn-block-height) })
+    (merge (var-get owner) { next-owner: (some next-owner), block-height: (some burn-block-height) })
     (ok true)
   )
 )
 
 
 (define-public (activate-owner )
-  (begin
+  (let (
+    (owner-tuple (var-get owner))
+    (next-owner (get next-owner owner-tuple))
+    (request-owner-update-block-height (unwrap! (get block-height owner-tuple) ERR_NO_ENTRY))
+  )
     (try! (check-is-owner tx-sender))
-    (asserts! (is-some (get next-owner (var-get owner))) ERR_NOT_UPDATE_REQUESTED)
-    (asserts! (>= burn-block-height (+ (unwrap-panic (get block-height (var-get owner))) activation-delay)) ERR_ACTIVATION)
-    (merge (var-get owner) { 
-      current-owner: (unwrap! (get next-owner (var-get owner)) ERR_NO_ENTRY),
+    (asserts! (is-some next-owner) ERR_NOT_UPDATE_REQUESTED)
+    (asserts! (>= burn-block-height (+ request-owner-update-block-height activation-delay)) ERR_ACTIVATION)
+    (merge owner-tuple { 
+      current-owner: (unwrap-panic next-owner),
       next-owner: none,
       block-height: none
     })
