@@ -15,6 +15,7 @@
 (define-constant ERR_AMOUNT_MISMATCH (err u2008))
 (define-constant ERR_SLIPPAGE_TOO_HIGH (err u2009))
 (define-constant ERR_ABOVE_MAX (err u2010))
+(define-constant ERR_ALREADY_EXECUTED (err u2011))
 
 (define-constant minting-contract (as-contract tx-sender))
 (define-constant max-confirmation-window u144)
@@ -76,6 +77,14 @@
     block-height: uint,           ;; burn-block-height
   }
 )
+
+(define-map mint-requests
+  { 
+    request-id: (string-ascii 36) 
+  }
+  {
+    executed: bool
+  })
 
 ;;-------------------------------------
 ;; Getters 
@@ -144,6 +153,12 @@
   (ok (unwrap! (map-get? redeem-requests { request-id: request-id }) ERR_NO_REQUEST_FOR_ID))
 ) 
 
+(define-read-only (get-mint-request-executed (request-id (string-ascii 36))) 
+  (default-to 
+    false
+    (get executed (map-get? mint-requests { request-id: request-id }))
+  )
+)
 
 ;;-------------------------------------
 ;; User
@@ -205,6 +220,7 @@
     (try! (contract-call? .hq check-is-enabled))
     (asserts! (var-get mint-enabled) ERR_TRADING_DISABLED)
     (asserts! (get minter (get-trader tx-sender)) ERR_NOT_ALLOWED)
+    (asserts! (is-eq (get-mint-request-executed request-id) true) ERR_ALREADY_EXECUTED)
 
     (if (> burn-block-height (+ (get-last-mint-limit-reset) (get-mint-limit-reset-window))) 
       (begin
@@ -220,6 +236,7 @@
 
     (print { request-id: request-id, requester: requester, price: price, amount-usdh: amount-usdh, amount-usdh-confirmed: amount-usdh-confirmed, block-height: burn-block-height })
     (var-set current-mint-limit (- (get-current-mint-limit) amount-usdh))
+    (map-insert mint-requests {request-id: request-id} {executed: true})
     (ok true)
   )
 )
