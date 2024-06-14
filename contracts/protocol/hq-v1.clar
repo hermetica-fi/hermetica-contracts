@@ -223,10 +223,8 @@
 (define-public (activate-owner )
   (begin
     (try! (check-is-owner tx-sender))
-    (asserts! (>= burn-block-height (+ 
-      (unwrap-panic (get block-height (var-get owner)))
-      activation-delay)) ERR_ACTIVATION)
     (asserts! (is-some (get next-owner (var-get owner))) ERR_NOT_UPDATE_REQUESTED)
+    (asserts! (>= burn-block-height (+ (unwrap-panic (get block-height (var-get owner))) activation-delay)) ERR_ACTIVATION)
     (merge (var-get owner) { 
       current-owner: (unwrap! (get next-owner (var-get owner)) ERR_NO_ENTRY),
       next-owner: none,
