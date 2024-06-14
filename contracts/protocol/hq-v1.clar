@@ -24,7 +24,8 @@
 (define-data-var contracts-enabled bool true)
 (define-data-var minting-enabled bool true)
 
-(define-data-var safeguard-owner-enabled bool false)
+(define-data-var owner-safeguard-enabled bool false)
+
 ;;-------------------------------------
 ;; Maps 
 ;;-------------------------------------
@@ -222,9 +223,9 @@
 (define-public (remove-owner (address principal))
   (begin
     (try! (check-is-owner tx-sender))
-    (asserts! (var-get safeguard-owner-enabled) ERR_SAFEGUARD_DISABLED)
+    (asserts! (var-get owner-safeguard-enabled) ERR_SAFEGUARD_DISABLED)
     (map-delete owners { address: address })
-    (var-set safeguard-owner-enabled false)
+    (var-set owner-safeguard-enabled false)
     (ok true)
   )
 )
@@ -237,7 +238,7 @@
     (try! (check-is-owner tx-sender))
     (asserts! (>= burn-block-height (+ owner-block-height activation-delay)) ERR_ACTIVATION)
     (map-set owners { address: address } (merge owner-entry { active: true }))
-    (var-set safeguard-owner-enabled true)
+    (var-set owner-safeguard-enabled true)
     (ok true)
   )
 )
