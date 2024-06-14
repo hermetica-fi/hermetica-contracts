@@ -13,6 +13,7 @@
 (define-constant ERR_INACTIVE_CONTRACT (err u1006))
 (define-constant ERR_NO_ENTRY (err u1007))
 (define-constant ERR_ACTIVATION (err u1008))
+(define-constant ERR_NOT_UPDATE_REQUESTED (err u1009))
 
 (define-constant activation-delay u1008) ;; burn-block-height
 
@@ -23,19 +24,23 @@
 (define-data-var contracts-enabled bool true)
 (define-data-var minting-enabled bool true)
 
+(define-data-var owner
+  {
+    current-owner: principal,
+    next-owner: (optional principal),
+    block-height: (optional uint)
+  }
+  {
+    current-owner: tx-sender,
+    next-owner: none,
+    block-height: none
+  }
+)
+
 ;;-------------------------------------
 ;; Maps 
 ;;-------------------------------------
 
-(define-map owners
-  { 
-    address: principal 
-  }
-  {
-    active: bool,
-    block-height: (optional uint)
-  }
-)
 
 (define-map admins
   { 
@@ -86,10 +91,7 @@
 )
 
 (define-read-only (get-owner (address principal))
-  (default-to 
-    { active: false, block-height: none }
-    (map-get? owners { address: address })
-  )
+  (get current-owner (var-get owner))
 )
 
 (define-read-only (get-admin (address principal))
@@ -139,7 +141,7 @@
 
 (define-public (check-is-owner (contract principal))
   (begin
-    (asserts! (get active (get-owner contract)) ERR_NOT_OWNER)
+    (asserts! (is-eq contract (get current-owner (var-get owner))) ERR_NOT_OWNER)
     (ok true)
   )
 )
@@ -209,30 +211,27 @@
   )
 )
 
-(define-public (request-owner-update (address principal))
+(define-public (request-owner-update (next-owner principal))
   (begin
     (try! (check-is-owner tx-sender))
-    (map-set owners { address: address } { active: false, block-height: (some burn-block-height) })
+    (merge (var-get owner) { next-owner: next-owner, block-height: (some burn-block-height) })
     (ok true)
   )
 )
 
-(define-public (remove-owner (address principal))
+
+(define-public (activate-owner )
   (begin
     (try! (check-is-owner tx-sender))
-    (map-delete owners { address: address })
-    (ok true)
-  )
-)
-
-(define-public (activate-owner (address principal))
-  (let (
-    (owner-entry (get-owner address))
-    (owner-block-height (unwrap! (get block-height owner-entry) ERR_NO_ENTRY))
-  )
-    (try! (check-is-owner tx-sender))
-    (asserts! (>= burn-block-height (+ owner-block-height activation-delay)) ERR_ACTIVATION)
-    (map-set owners { address: address } (merge owner-entry { active: true }))
+    (asserts! (>= burn-block-height (+ 
+      (unwrap-panic (get block-height (var-get owner)))
+      activation-delay)) ERR_ACTIVATION)
+    (asserts! (is-some (get next-owner (var-get owner))) ERR_NOT_UPDATE_REQUESTED)
+    (merge (var-get owner) { 
+      current-owner: (unwrap! (get next-owner (var-get owner)) ERR_NO_ENTRY),
+      next-owner: none,
+      block-height: none
+    })
     (ok true)
   )
 )
@@ -293,7 +292,6 @@
 ;; Init 
 ;;-------------------------------------
 
-(map-set owners { address: tx-sender } { active: true, block-height: (some block-height) })
 (map-set admins { address: tx-sender } { active: true })
 (map-set guardians { address: tx-sender } { active: true })
 (map-set minting-contracts { address: .minting } { active: true, block-height: (some block-height) })
