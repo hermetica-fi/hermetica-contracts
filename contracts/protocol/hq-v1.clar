@@ -13,7 +13,6 @@
 (define-constant ERR_INACTIVE_CONTRACT (err u1006))
 (define-constant ERR_NO_ENTRY (err u1007))
 (define-constant ERR_ACTIVATION (err u1008))
-(define-constant ERR_NOT_UPDATE_REQUESTED (err u1009))
 
 (define-constant activation-delay u1008) ;; burn-block-height
 
@@ -223,14 +222,13 @@
 (define-public (activate-owner )
   (let (
     (owner-tuple (var-get owner))
-    (next-owner (get next-owner owner-tuple))
+    (next-owner (unwrap! (get next-owner owner-tuple) ERR_NO_ENTRY)) 
     (request-owner-update-block-height (unwrap! (get block-height owner-tuple) ERR_NO_ENTRY))
   )
     (try! (check-is-owner tx-sender))
-    (asserts! (is-some next-owner) ERR_NOT_UPDATE_REQUESTED)
     (asserts! (>= burn-block-height (+ request-owner-update-block-height activation-delay)) ERR_ACTIVATION)
     (merge owner-tuple { 
-      current-owner: (unwrap-panic next-owner),
+      current-owner: next-owner,
       next-owner: none,
       block-height: none
     })
