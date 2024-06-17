@@ -132,10 +132,3 @@
     (ft-burn? susdh amount sender)
   )
 )
-
-;; Burn external
-(define-public (burn (amount uint))
-  (begin
-    (ft-burn? susdh amount tx-sender)
-  )
-)
