@@ -112,7 +112,7 @@
             (reserve-share (get reserve (get-distribution)))
           )
             (print { staking-share: staking-share, insurance-share: insurance-share, reserve-share: reserve-share })
-            (try! (contract-call? .usdh-token mint-for-protocol (/ (* staking-share pnl) bps-base) .staking-reserve))
+            (try! (contract-call? .staking log-staking-pnl (/ (* staking-share pnl) bps-base) ))
             (try! (contract-call? .usdh-token mint-for-protocol (/ (* insurance-share pnl) bps-base) .insurance-fund))
             (try! (contract-call? .usdh-token mint-for-protocol (/ (* reserve-share pnl) bps-base) .reserve))
         )

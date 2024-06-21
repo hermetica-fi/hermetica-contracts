@@ -13,6 +13,7 @@
 ;;-------------------------------------
 
 (define-data-var total-staked uint u0)  ;; usdh 
+(define-data-var last-log-pnl-amount-helper uint u0)
 
 ;;-------------------------------------
 ;; Getters 
@@ -73,5 +74,26 @@
     (var-set total-staked (- total-usdh-staked amount))
     (print { amount-susdh: amount, amount-usdh: amount-usdh, ratio: ratio })
     (ok true)
+  )
+)
+
+;;-------------------------------------
+;; Protocol
+;;-------------------------------------
+
+(define-public (log-staking-pnl (amount uint))
+  (begin 
+    (try! (contract-call? .hq check-is-protocol contract-caller))
+    (var-set last-log-pnl-amount-helper amount)
+    (ok (var-set total-staked (+ (var-get total-staked) amount)))
+  )
+)
+
+(define-public (revert-last-log-staking-pnl) 
+  (begin 
+    ;; todo: check is updater? updater map is in controller but if we update the controller we will need to update the staking contract. (can we move updater to hq or state contract)
+    (try! (contract-call? .hq check-is-protocol tx-sender)) 
+    (ok (var-set total-staked (- (var-get total-staked) (var-get last-log-pnl-amount-helper))))
+  
   )
 )
