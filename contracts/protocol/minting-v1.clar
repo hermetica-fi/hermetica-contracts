@@ -357,8 +357,6 @@
   (let (
     (mint-request (try! (get-mint-request (get request-id entry))))
     (requester (get requester mint-request))
-    (amount-usdh-requested (get amount-usdh-requested mint-request))
-    (new-mint-limit (+ (get-current-mint-limit) amount-usdh-requested))
     (minting-asset-contract (get minting-asset mint-request))
     (minting-asset-entry (get minting-asset entry))
   )
@@ -367,7 +365,6 @@
     
     (try! (as-contract (contract-call? minting-asset-entry transfer (get amount-asset mint-request) tx-sender requester none)))
     (map-delete mint-requests { request-id: (get request-id entry)})
-    (if (<= new-mint-limit (get-mint-limit)) (var-set current-mint-limit new-mint-limit) (var-set current-mint-limit (get-mint-limit)))
     (ok true)
   )
 )
@@ -485,8 +482,6 @@
     (minting-asset-entry (get minting-asset entry))
     (minting-asset-contract (get minting-asset mint-request))
     (amount-asset-requested (get amount-asset mint-request))
-    (amount-usdh-requested (get amount-usdh-requested mint-request))
-    (new-mint-limit (+ (get-current-mint-limit) amount-usdh-requested))
     (requester (get requester mint-request))
   )
     (try! (contract-call? .hq check-is-enabled))
@@ -496,7 +491,6 @@
 
     (try! (as-contract (contract-call? minting-asset-entry transfer amount-asset-requested tx-sender requester none)))
     (map-delete mint-requests { request-id: (get request-id entry) })
-    (if (<= new-mint-limit (get-mint-limit)) (var-set current-mint-limit new-mint-limit) (var-set current-mint-limit (get-mint-limit)))
     (ok true)
   )
 )
