@@ -240,7 +240,7 @@
     (asserts! (var-get redeem-enabled) ERR_TRADING_DISABLED)
     (asserts! (get redeemer (get-trader tx-sender)) ERR_NOT_ALLOWED)
     (asserts! (is-eq amount-usdh amount-usdh-requested) ERR_AMOUNT_MISMATCH)
-    (asserts! (>= price (- price-requested slippage-tolerance)) ERR_SLIPPAGE_TOO_HIGH)
+    (asserts! (<= price (+ price-requested slippage-tolerance)) ERR_SLIPPAGE_TOO_HIGH)
 
     (print { request-id: request-id, price: price, amount-usdh: amount-usdh, amount-usdh-confirmed: amount-usdh-confirmed, amount-asset-confirmed: amount-asset-confirmed, btc-address: btc-address })
     (try! (as-contract (contract-call? .usdh-token burn-for-protocol amount-usdh-confirmed tx-sender)))
