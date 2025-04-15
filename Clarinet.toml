@@ -37,6 +37,11 @@ path = 'contracts/protocol/minting-auto-v1.clar'
 clarity_version = 3
 epoch = 3.0
 
+[contracts.usdh-airdrop]
+path = 'contracts/protocol/usdh-airdrop-v1.clar'
+clarity_version = 3
+epoch = 3.0
+
 [contracts.redeeming-reserve]
 path = 'contracts/protocol/redeeming-reserve-v1.clar'
 clarity_version = 2
