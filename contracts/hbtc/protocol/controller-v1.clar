@@ -9,9 +9,9 @@
 (define-constant ERR_INSUFFICIENT_FUNDS (err u104002))
 (define-constant ERR_NO_PENDING_TRANSFERS (err u104003))
 
-(define-constant bps-base (pow u10 u4))
-(define-constant pct-base (pow u10 u2))
-(define-constant share-base (pow u10 u8))
+(define-constant bps-base u10000)                               ;; 10^4
+(define-constant pct-base u100)                                 ;; 10^2
+(define-constant share-base u100000000)                         ;; 10^8
 (define-constant fee-collector .fee-collector)
 (define-constant rf .reserve-fund)
 (define-constant reserve .reserve)
