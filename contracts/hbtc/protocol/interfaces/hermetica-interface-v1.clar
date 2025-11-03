@@ -18,7 +18,7 @@
 (define-constant ERR_INSUFFICIENT_BALANCE (err u110002))
 
 (define-constant this-contract (as-contract tx-sender))
-(define-constant usdh-base (pow u10 u8))
+(define-constant usdh-base u100000000)                          ;; 10^8
 
 (define-constant reserve .reserve)
 (define-constant usdh-token .usdh-token)
