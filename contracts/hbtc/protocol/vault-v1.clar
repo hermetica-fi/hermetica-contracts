@@ -16,8 +16,8 @@
 (define-constant ERR_ALREADY_FUNDED (err u103006))
 (define-constant ERR_NOT_FUNDED (err u103007))
 
-(define-constant share-base (pow u10 u8))
-(define-constant bps-base (pow u10 u4))
+(define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
+(define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
 
 (define-constant this-contract (as-contract tx-sender))
 (define-constant reserve .reserve)
