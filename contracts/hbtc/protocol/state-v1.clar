@@ -24,6 +24,7 @@
 (define-constant ERR_DEVIATION (err u102014))
 (define-constant ERR_INVALID (err u102015))
 (define-constant ERR_NO_OPERATIONS (err u102016))
+(define-constant ERR_FEE_WINDOW (err u102017))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
@@ -45,6 +46,7 @@
 (define-constant pct-base (pow u10 u2))                           ;; 10^2 = 100 (percentage base)
 (define-constant bps-base (pow u10 u4))                           ;; 10^4 = 10000 (basis points base)
 (define-constant share-base (pow u10 u8))                         ;; 10^8 = 100000000 (share price base) 
+(define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 
 ;;-------------------------------------
 ;; Variables
@@ -538,14 +540,21 @@
 
 (define-public (set-fees (mgmt-fee uint) (perf-fee uint) (exit-fee uint) (express-fee uint))
   (let (
+    (current-fees (get-fees))
+    (last-ts (get-last-log-ts))
     (new-fees { mgmt-fee: mgmt-fee, perf-fee: perf-fee, exit-fee: exit-fee, express-fee: express-fee })
+    (mgmt-changed (not (is-eq mgmt-fee (get mgmt-fee current-fees))))
+    (perf-changed (not (is-eq perf-fee (get perf-fee current-fees))))
   )
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
     (asserts! (<= mgmt-fee (get mgmt-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= perf-fee (get perf-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= express-fee (get express-fee max)) ERR_ABOVE_MAX)
-    (print { action: "set-fees", user: contract-caller, data: { old: (get-fees), new: new-fees } })
+    (if (or mgmt-changed perf-changed)
+      (asserts! (or (<= (get-current-ts) (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+      true)
+    (print { action: "set-fees", user: contract-caller, data: { old: current-fees, new: new-fees } })
     (ok (var-set fees new-fees))
   )
 )
