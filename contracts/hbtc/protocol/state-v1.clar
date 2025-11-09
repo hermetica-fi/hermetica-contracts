@@ -37,6 +37,7 @@
   express-fee: u200,                                              ;; [200 bps] => 2.00% - max express withdraw fee
   cooldown: u2592000,                                             ;; [2592000 seconds] => 30 days - withdraw cooldown period
   block-delay: u60,                                               ;; [60 stacks blocks] => ~5 min - price staleness check
+  fee-window: u3600,                                              ;; [3600 seconds] => 1 hour - max fee change window after rewards
 })
 
 (define-constant min {
@@ -68,6 +69,7 @@
 (define-data-var cooldown uint u259200)                           ;; [259200 seconds] => 3 days - default withdraw cooldown period
 (define-data-var express-cooldown uint u3600)                     ;; [3600 seconds] => 1 hour - express withdraw cooldown period
 (define-data-var update-window uint (* u3600 u23))                ;; [82800 seconds] => 23 hours - min time between reward updates
+(define-data-var fee-window uint u3600)                           ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 (define-data-var block-delay uint u10)                            ;; [10 stacks blocks] => ~50 seconds - price staleness check
 
 ;; Operational States
@@ -167,6 +169,10 @@
 
 (define-read-only (get-fees)
   (var-get fees)
+)
+
+(define-read-only (get-fee-window)
+  (var-get fee-window)
 )
 
 (define-read-only (get-total-assets)  
@@ -552,10 +558,19 @@
     (asserts! (<= exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= express-fee (get express-fee max)) ERR_ABOVE_MAX)
     (if (or mgmt-changed perf-changed)
-      (asserts! (or (<= (get-current-ts) (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+      (asserts! (or (<= (get-current-ts) (+ last-ts (get-fee-window))) (is-eq last-ts u0)) ERR_FEE_WINDOW)
       true)
     (print { action: "set-fees", user: contract-caller, data: { old: current-fees, new: new-fees } })
     (ok (var-set fees new-fees))
+  )
+)
+
+(define-public (set-fee-window (new-fee-window uint))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (asserts! (<= new-fee-window (get fee-window max)) ERR_ABOVE_MAX)
+    (print { action: "set-fee-window", user: contract-caller, data: { old: (get-fee-window), new: new-fee-window } })
+    (ok (var-set fee-window new-fee-window))
   )
 )
 
