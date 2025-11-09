@@ -47,7 +47,6 @@
 (define-constant pct-base (pow u10 u2))                           ;; 10^2 = 100 (percentage base)
 (define-constant bps-base (pow u10 u4))                           ;; 10^4 = 10000 (basis points base)
 (define-constant share-base (pow u10 u8))                         ;; 10^8 = 100000000 (share price base) 
-(define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 
 ;;-------------------------------------
 ;; Variables
