@@ -9,9 +9,9 @@
 (define-constant ERR_INSUFFICIENT_FUNDS (err u104002))
 (define-constant ERR_NO_PENDING_TRANSFERS (err u104003))
 
-(define-constant bps-base (pow u10 u4))
-(define-constant pct-base (pow u10 u2))
-(define-constant share-base (pow u10 u8))
+(define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
+(define-constant pct-base u100)                                 ;; 10^2 = 100 (percentage base)
+(define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
 (define-constant fee-collector .fee-collector)
 (define-constant rf .reserve-fund)
 (define-constant reserve .reserve)
@@ -25,12 +25,12 @@
 (define-public (log-reward (reward uint) (is-positive bool))
   (let (
     (state (contract-call? .state get-reward-state))
-    (total-assets (get total-assets state))
     (fees (get fees state))
     (pending-rf (get pending-rf state))
     (reserve-rate (get reserve-rate state))
-    (perf-fee (if is-positive (/ (* (get perf-fee fees) reward) bps-base) u0))
-    (mgmt-fee (/ (* (get mgmt-fee fees) total-assets) bps-base pct-base))
+    (mgmt-fee (/ (* (get mgmt-fee fees) (get net-assets state)) bps-base pct-base))
+    (reward-after-mgmt-fee (if (>= reward mgmt-fee) (- reward mgmt-fee) u0))
+    (perf-fee (if is-positive (/ (* (get perf-fee fees) reward-after-mgmt-fee) bps-base) u0))
     (total-fees (+ perf-fee mgmt-fee))
     (is-profit (and is-positive (>= reward total-fees)))
     (req-rf (if is-profit
@@ -72,7 +72,7 @@
     (total-reserve (get-sbtc-balance reserve))
     (total-pending (+ pending-fees pending-rf))
   )
-    (try! (contract-call? .hq-hbtc check-is-rewarder contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-manager contract-caller))
 
     (asserts! (> total-pending u0) ERR_NO_PENDING_TRANSFERS)
     (asserts! (>= total-reserve total-pending) ERR_INSUFFICIENT_FUNDS)
@@ -103,22 +103,22 @@
   (perf-fee uint) (mgmt-fee uint)
   (reserve-rate uint))
   (let (
-    (reward-after-fees (- reward (+ perf-fee mgmt-fee)))
+    (total-fees (+ perf-fee mgmt-fee))
+    (reward-after-fees (- reward total-fees))
     (reward-rf (/ (* reward-after-fees reserve-rate) bps-base))
     (reward-net (- reward-after-fees reward-rf))
   )
     (print {
       action: "log-reward",
-      case: (if (is-eq reward-after-fees u0) "zero" "profit"),
       user: contract-caller,
-      data: { reward: { gross: reward, rf: reward-rf, net: reward-net, is-positive: true }, fees: { perf: perf-fee, mgmt: mgmt-fee }, rf: { old: total-rf, new: (+ total-rf reward-rf)  } }
+      data: { case: (if (is-eq reward-after-fees u0) "zero" "profit"), reward: { gross: reward, net: reward-net, rf: reward-rf, is-positive: true, is-add: true }, fees: { perf: perf-fee, mgmt: mgmt-fee }, rf: { old: total-rf, new: (+ total-rf reward-rf), required: reward-rf } }
     })
     ;; Single batch call with commit-reward logic
     (ok (try! (contract-call? .state update-state 
       (list
-        { type: "pending-fees", amount: (+ perf-fee mgmt-fee), is-add: true }
+        { type: "pending-fees", amount: total-fees, is-add: true }
         { type: "pending-rf", amount: reward-rf, is-add: true })
-      (some { reward: reward-net, is-add: true })
+      (some { reward: reward, is-add: true })
       none)))
   )
 )
@@ -132,12 +132,16 @@
   (let (
     (transfer-amount (if (> req-rf pending-rf) (- req-rf pending-rf) u0))
     (rf-decrease (if (> transfer-amount u0) pending-rf req-rf))
+    (reward-delta (if is-positive
+      { reward: (+ reward transfer-amount), is-add: true }
+      (if (>= reward transfer-amount)
+        { reward: (- reward transfer-amount), is-add: false }
+        { reward: (- transfer-amount reward), is-add: true })))
   )
     (print {
       action: "log-reward",
-      case: "loss-covered",
       user: contract-caller,
-      data: { reward: { gross: reward, net: u0, rf: u0, is-positive: is-positive }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: (- total-rf req-rf) } }
+      data: { case: "loss-covered", reward: { gross: reward, net: (get reward reward-delta), rf: transfer-amount, is-positive: is-positive, is-add: (get is-add reward-delta) }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: (- total-rf req-rf), required: req-rf } }
     })
     
     ;; Physical transfer if needed
@@ -151,7 +155,7 @@
       (list
         { type: "pending-rf", amount: rf-decrease, is-add: false }
         { type: "pending-fees", amount: mgmt-fee, is-add: true })
-      (some { reward: u0, is-add: false })
+      (some { reward: (get reward reward-delta), is-add: (get is-add reward-delta) })
       none))
     (ok true) 
   )
@@ -163,24 +167,35 @@
   (total-rf uint) (pending-rf uint) (req-rf uint)
   (perf-fee uint) (mgmt-fee uint))
   (let (
-    (loss (- req-rf total-rf))
+    (transfer-amount (- total-rf pending-rf))
+    ;; mgmt-fee accounted in pending-fees; reward-delta accounts reward vs RF transfer only
+    (reward-delta (if is-positive
+      ;; Positive reward < mgmt-fee (req-rf > total-rf): add reward + transfer-amount
+      { reward: (+ reward transfer-amount), is-add: true }
+      ;; is-positive = false: reward is absolute loss magnitude
+      (if (>= reward transfer-amount)
+        ;; Large loss: remaining loss = reward - transfer-amount (net decrease)
+        { reward: (- reward transfer-amount), is-add: false }
+        ;; Small loss: RF covers it, net positive = transfer-amount - reward (mgmt-fee pushes req-rf > total-rf)
+        { reward: (- transfer-amount reward), is-add: true })))
   )
     (print {
       action: "log-reward",
-      case: "loss-exceeds",
       user: contract-caller,
-      data: { reward: { gross: reward, net: loss, rf: u0, is-positive: is-positive }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: u0 } }
+      data: { case: "loss-exceeds", reward: { gross: reward, net: (get reward reward-delta), rf: transfer-amount, is-positive: is-positive, is-add: (get is-add reward-delta) }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: u0, required: req-rf } }
     })
-    (if (> total-rf pending-rf)
-      (try! (contract-call? .reserve-fund transfer sbtc-token (- total-rf pending-rf) reserve none))
+
+    (if (> transfer-amount u0)
+      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve none))
       true
     )
 
+    ;; Single batch call with commit-reward logic using adjusted loss accounting
     (ok (try! (contract-call? .state update-state 
       (list
         { type: "pending-fees", amount: mgmt-fee, is-add: true }
         { type: "pending-rf", amount: pending-rf, is-add: false })
-      (some { reward: loss, is-add: false })
+      (some { reward: (get reward reward-delta), is-add: (get is-add reward-delta) })
       none)))
   )
 )

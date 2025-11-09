@@ -24,19 +24,20 @@
 (define-constant ERR_DEVIATION (err u102014))
 (define-constant ERR_INVALID (err u102015))
 (define-constant ERR_NO_OPERATIONS (err u102016))
-(define-constant ERR_FEE_WINDOW (err u102017))
+(define-constant ERR_ZERO_SUPPLY (err u102017))
+(define-constant ERR_FEE_WINDOW (err u102018))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
   deviation: u20,                                                 ;; [20 bps] => 0.20% - max share price deviation per update
   slippage: u500,                                                 ;; [500 bps] => 5.00% - max slippage for asset trades
-  mgmt-fee: u54,                                                  ;; [54 bps/10000] => 0.0054% daily (2% annualized) - max management fee
+  mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
   perf-fee: u2000,                                                ;; [2000 bps] => 20.00% - max performance fee on profits
   exit-fee: u100,                                                 ;; [100 bps] => 1.00% - max exit fee on withdraws
   reserve-rate: u5000,                                            ;; [5000 bps] => 50.00% - max reserve fund allocation rate
   express-fee: u200,                                              ;; [200 bps] => 2.00% - max express withdraw fee
   cooldown: u2592000,                                             ;; [2592000 seconds] => 30 days - withdraw cooldown period
-  block-delay: u60,                                               ;; [60 stacks blocks] => ~5 min - price staleness check
+  staleness-window: u300,                                         ;; [300 seconds] => 5 min - price staleness check
   fee-window: u3600,                                              ;; [3600 seconds] => 1 hour - max fee change window after rewards
 })
 
@@ -44,9 +45,9 @@
   update-window: u3600,                                           ;; [3600 seconds] => 1 hour - min time between reward updates
 })
 
-(define-constant pct-base (pow u10 u2))                           ;; 10^2 = 100 (percentage base)
-(define-constant bps-base (pow u10 u4))                           ;; 10^4 = 10000 (basis points base)
-(define-constant share-base (pow u10 u8))                         ;; 10^8 = 100000000 (share price base) 
+(define-constant pct-base u100)                                   ;; 10^2 = 100 (percentage base)
+(define-constant bps-base u10000)                                 ;; 10^4 = 10000 (basis points base)
+(define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
 
 ;;-------------------------------------
 ;; Variables
@@ -69,7 +70,7 @@
 (define-data-var express-cooldown uint u3600)                     ;; [3600 seconds] => 1 hour - express withdraw cooldown period
 (define-data-var update-window uint (* u3600 u23))                ;; [82800 seconds] => 23 hours - min time between reward updates
 (define-data-var fee-window uint u3600)                           ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
-(define-data-var block-delay uint u10)                            ;; [10 stacks blocks] => ~50 seconds - price staleness check
+(define-data-var staleness-window uint u50)                       ;; [50 seconds] => ~50 seconds - price staleness check
 
 ;; Operational States
 (define-data-var vault-active bool true)                          ;; vault enabled/disabled flag
@@ -214,8 +215,8 @@
   (var-get last-log-ts)
 )
 
-(define-read-only (get-block-delay)
-  (var-get block-delay)
+(define-read-only (get-staleness-window)
+  (var-get staleness-window)
 )
 
 (define-read-only (get-pending-fees)
@@ -298,12 +299,12 @@
 
 ;; @desc - Batch getter for controller reward operations
 (define-read-only (get-reward-state)
-  { total-assets: (get-total-assets), fees: (get-fees), pending-rf: (get-pending-rf), reserve-rate: (get-reserve-rate) }
+  { total-assets: (get-total-assets), net-assets: (get-net-assets), fees: (get-fees), pending-rf: (get-pending-rf), reserve-rate: (get-reserve-rate) }
 )
 
 ;; @desc - Batch getter for deposit operation - returns all state needed for deposit validation
 (define-read-only (get-deposit-state)
-  { share-price: (get-share-price), total-assets: (get-total-assets), deposit-cap: (get-deposit-cap), min-amount: (get-min-amount) }
+  { share-price: (get-share-price), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-amount: (get-min-amount) }
 )
 
 ;; @desc - Batch getter for withdraw/redeem operation - returns all data needed
@@ -336,10 +337,14 @@
   )
 )
 
+(define-read-only (check-is-transfer-active)
+  (ok (asserts! (get-transfer-active) ERR_TRANSFER_DISABLED))
+)
+
 (define-read-only (check-transfer-auth (asset principal))
   (begin
     (try! (check-is-vault-active))
-    (asserts! (get-transfer-active) ERR_TRANSFER_DISABLED)
+    (try! (check-is-transfer-active))
     (check-is-asset asset)
   )
 )
@@ -367,7 +372,7 @@
     (ok (asserts! (<= amount (/ (* (get-max-reward) (get-total-assets)) bps-base)) ERR_ABOVE_MAX))
 )
 
-(define-public (check-trading-auth (contract-1 principal) (contract-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
+(define-read-only (check-trading-auth (contract-1 principal) (contract-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
   (begin
     (try! (check-is-trading-active))
     (try! (check-is-contract contract-1))
@@ -378,17 +383,16 @@
 )
 
 ;; Share Price Protection
-(define-read-only (check-max-deviation (old-price uint) (new-price uint))
+(define-read-only (check-max-deviation (old-price uint) (new-price uint) (share-supply uint))
   (let (
     (threshold (get-max-deviation))
     (abs-diff (if (> new-price old-price) 
                   (- new-price old-price) 
                   (- old-price new-price)))
-    (deviation (if (> old-price u0)
+    (deviation (if (> share-supply u0)
                   (/ (* abs-diff bps-base) old-price)
-                  u0))  ;; Handle edge case of first deposit
+                  u0))  ;; Handle edge case of last withdraw/redeem
   )
-    (print { action: "check-max-deviation", data: { old: old-price, new: new-price, deviation: deviation, max-deviation: threshold } })
     (ok (asserts! (<= deviation threshold) ERR_DEVIATION))
   )
 )
@@ -400,31 +404,33 @@
 (define-private (update-total-assets (amount uint) (is-add bool))
   (let (
     (current (get-total-assets))
+    (new (if is-add (+ current amount) (- current amount)))
   )
-    (var-set total-assets (if is-add (+ current amount) (- current amount)))
-    (print { action: "update-total-assets", data: { old: current, new: (get-total-assets), is-add: is-add } })
+    (var-set total-assets new)
+    (print { action: "update-total-assets", data: { old: current, new: new, is-add: is-add } })
     (ok true)
   )
 )
 
-(define-private (update-shares (amount uint) (is-add bool) (user principal))
+(define-private (update-shares (amount uint) (is-add bool) (user principal) (current-supply uint))
   (let (
-    (current (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+    (new-supply (if is-add (+ current-supply amount) (- current-supply amount)))
   )
     (if is-add 
       (try! (contract-call? .hbtc-token mint-for-protocol amount user)) 
       (try! (contract-call? .hbtc-token burn-for-protocol amount user)))
-    (print { action: "update-shares", data: { old: current, new: (if is-add (+ current amount) (- current amount)), user: user, is-add: is-add } })
-    (ok true)
+    (print { action: "update-shares", data: { old: current-supply, new: new-supply, user: user, is-add: is-add } })
+    (ok new-supply)
   )
 )
 
 (define-private (update-pending-claims (amount uint) (is-add bool))
   (let (
     (current (get-pending-claims))
+    (new (if is-add (+ current amount) (- current amount)))
   )
-    (var-set pending-claims (if is-add (+ current amount) (- current amount)))
-    (print { action: "update-pending-claims", data: { old: current, new: (get-pending-claims), is-add: is-add } })
+    (var-set pending-claims new)
+    (print { action: "update-pending-claims", data: { old: current, new: new, is-add: is-add } })
     (ok true)
   )
 )
@@ -432,9 +438,10 @@
 (define-private (update-pending-fees (amount uint) (is-add bool))
   (let (
     (current (get-pending-fees))
+    (new (if is-add (+ current amount) (- current amount)))
   )
-    (var-set pending-fees (if is-add (+ current amount) (- current amount)))
-    (print { action: "update-pending-fees", data: { old: current, new: (get-pending-fees), is-add: is-add } })
+    (var-set pending-fees new)
+    (print { action: "update-pending-fees", data: { old: current, new: new, is-add: is-add } })
     (ok true)
   )
 )
@@ -442,17 +449,20 @@
 (define-private (update-pending-rf (amount uint) (is-add bool))
   (let (
     (current (get-pending-rf))
+    (new (if is-add (+ current amount) (- current amount)))
   )
-    (var-set pending-rf (if is-add (+ current amount) (- current amount)))
-    (print { action: "update-pending-rf", data: { old: current, new: (get-pending-rf), is-add: is-add } })
+    (var-set pending-rf new)
+    (print { action: "update-pending-rf", data: { old: current, new: new, is-add: is-add } })
     (ok true)
   )
 )
 
 (define-private (update-last-log-ts)
-  (begin
-    (print { action: "update-last-log-ts", data: { old: (get-last-log-ts), new: (get-current-ts) } })
-    (var-set last-log-ts (get-current-ts))
+  (let (
+    (current (get-current-ts))
+  )
+    (print { action: "update-last-log-ts", data: { old: (get-last-log-ts), new: current } })
+    (var-set last-log-ts current)
   )
 )
 
@@ -482,6 +492,7 @@
   (let (
     (init-share-price (get-share-price))
     (init-total-assets (get-total-assets))
+    (current-share-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
   )
     (try! (contract-call? .hq-hbtc check-is-protocol contract-caller))
     (asserts! (> (len operations) u0) ERR_NO_OPERATIONS)
@@ -489,33 +500,38 @@
     ;; Execute ALL operations before checking
     (try! (fold execute-update operations (ok true)))
     
-    ;; Optionally handle shares update
-    (match shares
-      data (try! (update-shares (get amount data) (get is-add data) (get user data)))
-      true)
-    
-    ;; Optionally handle commit-reward logic
-    (match reward
-      data (begin
-        (try! (check-max-reward (get reward data)))
-        (try! (check-update-window))
-        (unwrap-panic (update-total-assets (get reward data) (get is-add data)))
-        (update-last-log-ts)
-        (print { action: "commit-reward", user: contract-caller, data: { 
-          share-price: { old: init-share-price, new: (get-share-price) },
-          total-assets: { old: init-total-assets, new: (get-total-assets) },
-          return: (/ (* (get reward data) bps-base pct-base) init-total-assets),
-          next-log-ts: (get-last-log-ts),
-        } })
+    (let (
+      (post-share-supply
+        (match shares
+          data (try! (update-shares (get amount data) (get is-add data) (get user data) current-share-supply))
+          current-share-supply))
+    )
+      ;; Optionally handle commit-reward logic
+      (match reward
+        data (begin
+          (try! (check-max-reward (get reward data)))
+          (try! (check-update-window))
+          (asserts! (> (unwrap-panic (contract-call? .hbtc-token get-total-supply)) u0) ERR_ZERO_SUPPLY)
+          (unwrap-panic (update-total-assets (get reward data) (get is-add data)))
+          (update-last-log-ts)
+          (print { action: "commit-reward", user: contract-caller, data: { 
+            share-price: { old: init-share-price, new: (get-share-price) },
+            total-assets: { old: init-total-assets, new: (get-total-assets) },
+            reward: data,
+            log-ts: (get-last-log-ts),
+          } })
+          true)
         true)
-      true)
-    
-    ;; POST-CONDITION: Check share price deviation after all updates
-    (try! (check-max-deviation init-share-price (get-share-price)))
-    
-    (print { action: "update-state", user: contract-caller,
-             data: { operations: operations, shares: shares, share-price: { old: init-share-price, new: (get-share-price) } } })
-    (ok true)
+      
+      ;; POST-CONDITION: Check share price deviation after all updates
+      (let (
+        (new-share-price (get-share-price))
+      )
+        (try! (check-max-deviation init-share-price new-share-price post-share-supply))
+        
+        (print { action: "update-state", user: contract-caller, data: { operations: operations, shares: shares, share-price: { old: init-share-price, new: new-share-price } } })
+        (ok true)
+      ))
   )
 )
 
@@ -556,6 +572,7 @@
     (asserts! (<= perf-fee (get perf-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= express-fee (get express-fee max)) ERR_ABOVE_MAX)
+    (asserts! (<= exit-fee express-fee) ERR_INVALID)
     (if (or mgmt-changed perf-changed)
       (asserts! (or (<= (get-current-ts) (+ last-ts (get-fee-window))) (is-eq last-ts u0)) ERR_FEE_WINDOW)
       true)
@@ -582,10 +599,22 @@
   )
 )
 
+(define-private (remove-custom-exit-fee-iter (address principal) (prev (response bool uint)))
+  (ok (and (try! prev) (map-delete custom-exit-fee { address: address }))))
+
+(define-public (remove-custom-exit-fee (addresses (list 200 principal)))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-fee-setter contract-caller))
+    (print { action: "remove-custom-exit-fee", user: contract-caller, data: { addresses: addresses } })
+    (fold remove-custom-exit-fee-iter addresses (ok true))
+  )
+)
+
 (define-public (set-cooldown (new-cooldown uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
     (asserts! (<= new-cooldown (get cooldown max) ) ERR_ABOVE_MAX)
+    (asserts! (>= new-cooldown (get-express-cooldown)) ERR_INVALID)
     (print { action: "set-cooldown", user: contract-caller, data: { old: (get-cooldown), new: new-cooldown } })
     (ok (var-set cooldown new-cooldown))
   )
@@ -595,6 +624,7 @@
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
     (asserts! (<= new-cooldown (get cooldown max)) ERR_ABOVE_MAX)
+    (asserts! (<= new-cooldown (get-cooldown)) ERR_INVALID)
     (print { action: "set-express-cooldown", user: contract-caller, data: { old: (get-express-cooldown), new: new-cooldown } })
     (ok (var-set express-cooldown new-cooldown))
   )
@@ -606,6 +636,17 @@
     (asserts! (<= new-cooldown (get cooldown max) ) ERR_ABOVE_MAX)
     (print { action: "set-custom-cooldown", user: contract-caller, data: { address: address, old: (get-custom-cooldown address false), new: new-cooldown } })
     (ok (map-set custom-cooldown {  address: address } { cooldown: new-cooldown }))
+  )
+)
+
+(define-private (remove-custom-cooldown-iter (address principal) (prev (response bool uint)))
+  (ok (and (try! prev) (map-delete custom-cooldown { address: address }))))
+
+(define-public (remove-custom-cooldown (addresses (list 200 principal)))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (print { action: "remove-custom-cooldown", user: contract-caller, data: { addresses: addresses } })
+    (fold remove-custom-cooldown-iter addresses (ok true))
   )
 )
 
@@ -661,12 +702,12 @@
   )
 )
 
-(define-public (set-block-delay (new-block-delay uint))
+(define-public (set-staleness-window (new-staleness-window uint))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (asserts! (<= new-block-delay (get block-delay max) ) ERR_ABOVE_MAX)
-    (print { action: "set-block-delay", user: contract-caller, data: { old: (get-block-delay), new: new-block-delay } })
-    (ok (var-set block-delay new-block-delay))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (asserts! (<= new-staleness-window (get staleness-window max) ) ERR_ABOVE_MAX)
+    (print { action: "set-staleness-window", user: contract-caller, data: { old: (get-staleness-window), new: new-staleness-window } })
+    (ok (var-set staleness-window new-staleness-window))
   )
 )
 
@@ -788,6 +829,7 @@
 (define-public (set-max-slippage (address principal) (max-slippage uint))
   (let (
     (entry (get-asset address))
+    (ts (unwrap! (get ts entry) ERR_NO_ENTRY))
     (updated-entry (merge entry { max-slippage: max-slippage }))
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
@@ -802,6 +844,7 @@
     (new-entry { active: false, ts: (some (get-current-ts)) })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-standard address))
     (print { action: "request-new-contract", user: contract-caller, data: { address: address, old: (get-contract address), new: new-entry } })
     (ok (asserts! (map-insert contracts { address: address } new-entry) ERR_DUPLICATE))
   )

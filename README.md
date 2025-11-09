@@ -89,6 +89,29 @@ paired review session.
 | The functions confirm-mint, confirm-redeem don't check if the asset is still active | QA       | minting-v1                | Input Validation   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/9)                   |
 | Remove unnecessary variables                                        | QA       | minting-v1                                     | Gas Optimization   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/13)                  |
 
+
+## Deployment and Security Considerations
+
+### hBTC Vault First Depositor Attack Mitigation
+
+Smart contract vaults are subject to a known class of attacks where the first depositor can manipulate the share price through inflation. This enables attackers to extract value from subsequent depositors via a [known variation of the first depositor attack](https://x.com/kankodu/status/1771229163942474096) that applies even when the vault accounts for direct deposits.
+
+**Attack Mechanism**: Through repetitive, cleverly chosen dust deposits and withdrawals, an attacker can exponentially inflate the shares-to-asset ratio such that 1 unit of shares becomes vastly more valuable. This allows future deposits to round down significantly, with the attacker collecting the rounded-down amounts.
+
+**Mitigation**: The hBTC vault design includes a maximum price divergence mechanism that makes this attack economically unfeasible. However, to completely eliminate any potential rounding edge cases, the following deployment procedure must be executed.
+
+#### Required Deployment Procedure
+
+**After vault contract deployment, execute the following steps:**
+
+1. Have the deployment team deposit an initial amount of assets into the vault
+2. Transfer dust shares (e.g., 1000 LP nano units) to an inaccessible burn address: `SP000000000000000000002Q6VF78`
+3. These shares will never be burned or redeemed, ensuring the vault is never completely empty
+
+This procedure ensures that the vault always maintains a minimum share balance, preventing any first depositor from becoming the sole liquidity provider and eliminating rounding vulnerabilities.
+
+**Note**: This is a one-time operation that must be performed immediately after deployment and before the vault is opened to public deposits.
+
 ## Documentation
 
 - https://hermetica.gitbook.io/hermetica-tech-docs
