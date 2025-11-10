@@ -48,7 +48,7 @@
 (define-constant pct-base u100)                                   ;; 10^2 = 100 (percentage base)
 (define-constant bps-base u10000)                                 ;; 10^4 = 10000 (basis points base)
 (define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
-(define-constant one-hour u3600) ;; [3600 seconds] => 1 hour - mgmt/perf
+(define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 
 ;;-------------------------------------
 ;; Variables
@@ -84,7 +84,6 @@
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
 (define-data-var pending-fees uint u0)                            ;; [8 decimals] - total pending fees payable to protocol
 (define-data-var pending-rf uint u0)                              ;; [8 decimals] - total pending reserve fund payable to protocol
-(define-data-var pending-claims uint u0)                          ;; [8 decimals] - total pending claims payable to users
 (define-data-var claim-id uint u0)                                ;; [counter] - current claim ID
 (define-data-var last-log-ts uint u0)                             ;; [unix timestamp] - last reward log timestamp
 
@@ -161,7 +160,7 @@
 )
 
 (define-read-only (get-net-assets)
-  (- (get-total-assets) (get-pending-claims) (get-pending-fees) (get-pending-rf))
+  (- (get-total-assets) (get-pending-fees) (get-pending-rf))
 )
 
 (define-read-only (get-fee-address)
@@ -224,12 +223,8 @@
   (var-get pending-rf)
 )
 
-(define-read-only (get-pending-claims)
-  (var-get pending-claims)
-)
-
 (define-read-only (get-pending)
-  { fees: (get-pending-fees), rf: (get-pending-rf), claims: (get-pending-claims) }
+  { fees: (get-pending-fees), rf: (get-pending-rf) }
 )
 
 (define-read-only (get-claim-id)
@@ -436,17 +431,6 @@
   )
 )
 
-(define-private (update-pending-claims (amount uint) (is-add bool))
-  (let (
-    (current (get-pending-claims))
-    (new (if is-add (+ current amount) (- current amount)))
-  )
-    (var-set pending-claims new)
-    (print { action: "update-pending-claims", data: { old: current, new: new, is-add: is-add } })
-    (ok true)
-  )
-)
-
 (define-private (update-pending-fees (amount uint) (is-add bool))
   (let (
     (current (get-pending-fees))
@@ -486,13 +470,11 @@
     (try! prev)
     (if (is-eq (get type op) "total-assets")
       (update-total-assets (get amount op) (get is-add op))
-      (if (is-eq (get type op) "pending-claims")
-        (update-pending-claims (get amount op) (get is-add op))
-        (if (is-eq (get type op) "pending-fees")
-          (update-pending-fees (get amount op) (get is-add op))
-          (if (is-eq (get type op) "pending-rf")
-            (update-pending-rf (get amount op) (get is-add op))
-            ERR_INVALID))))
+      (if (is-eq (get type op) "pending-fees")
+        (update-pending-fees (get amount op) (get is-add op))
+        (if (is-eq (get type op) "pending-rf")
+          (update-pending-rf (get amount op) (get is-add op))
+          ERR_INVALID)))
   )
 )
 
@@ -792,6 +774,14 @@
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
     (print { action: "disable-trading", user: contract-caller, data: { old: (get-trading-active), new: false } })
     (ok (var-set trading-active false))
+  )
+)
+
+(define-public (set-express-active (active bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (print { action: "set-express-active", user: contract-caller, data: { old: (get-express-active), new: active } })
+    (ok (var-set express-active active))
   )
 )
 

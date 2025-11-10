@@ -36,7 +36,7 @@
     (req-rf (if is-profit
       u0
       (if is-positive 
-        (if (> mgmt-fee reward) (- mgmt-fee reward) u0)
+        (- mgmt-fee reward)
         (+ mgmt-fee reward))))
     (total-rf (+ (get-sbtc-balance rf) pending-rf))
   )
