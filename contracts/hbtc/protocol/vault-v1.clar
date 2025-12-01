@@ -15,6 +15,7 @@
 (define-constant ERR_ALREADY_FUNDED (err u103005))
 (define-constant ERR_NOT_FUNDED (err u103006))
 (define-constant ERR_EMPTY_LIST (err u103007))
+(define-constant ERR_NOT_AUTHORIZED (err u103008))
 
 (define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
 (define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
@@ -177,6 +178,24 @@
     (print { action: "redeem", user: contract-caller, data: { claim-id: claim-id, assets: assets, fee: fee, user: user, fee-address: fee-collector } })
     (map-delete claims { claim-id: claim-id })
     (ok assets-net)
+  )
+)
+
+;; @desc - Cancel a redeem request at any time
+(define-public (cancel-redeem (claim-id uint))
+  (let (
+    (claim (try! (get-claim claim-id)))
+    (claim-user (get user claim))
+    (shares (get shares claim))
+  )
+    (asserts! (is-eq contract-caller claim-user) ERR_NOT_AUTHORIZED)
+    (asserts! (not (get is-funded claim)) ERR_ALREADY_FUNDED)
+    (try! (contract-call? .blacklist check-is-not-soft claim-user))
+    
+    (try! (contract-call? .hbtc-token transfer shares this-contract claim-user none))
+    (map-delete claims { claim-id: claim-id })
+    (print { action: "cancel-redeem", user: contract-caller, data: { claim-id: claim-id, shares: shares } })
+    (ok shares)
   )
 )
 
