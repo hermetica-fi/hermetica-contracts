@@ -160,6 +160,24 @@
   )
 )
 
+;; @desc - calculate how many shares (hBTC tokens) you'd get for a given asset amount
+(define-read-only (convert-to-shares (assets-in uint))
+  (let (
+    (net-assets (get-net-assets))
+    (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+  )
+    (if (> total-supply u0)
+      (/ (* assets-in total-supply) net-assets)
+      assets-in ;; 1:1 for first deposit
+    )
+  )
+)
+
+;; @desc - calculate how many assets (sBTC) a given number of shares is worth
+(define-read-only (convert-to-assets (shares uint))
+  (/ (* shares (get-share-price)) share-base)
+)
+
 (define-read-only (get-net-assets)
   (- (get-total-assets) (get-pending-fees) (get-pending-rf))
 )
@@ -304,8 +322,8 @@
 )
 
 ;; @desc - Batch getter for deposit operation - returns all state needed for deposit validation
-(define-read-only (get-deposit-state)
-  { share-price: (get-share-price), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-deposit: (get-min-deposit) }
+(define-read-only (get-deposit-state (assets-in uint))
+  { shares: (convert-to-shares assets-in), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-deposit: (get-min-deposit) }
 )
 
 ;; @desc - Batch getter for redeem operation - returns all data needed

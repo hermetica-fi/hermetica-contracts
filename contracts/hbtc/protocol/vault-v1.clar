@@ -47,24 +47,14 @@
 ;; Getters
 ;;-------------------------------------
 
-;; @desc - calculate how many shares (hBTC tokens) you'd get for a given asset amount
-(define-read-only (convert-to-shares (assets uint))
-  (/ (* assets share-base) (contract-call? .state get-share-price))
-)
-
-;; @desc - calculate how many assets (sBTC) a given number of shares is worth
-(define-read-only (convert-to-assets (shares uint))
-  (/ (* shares (contract-call? .state get-share-price)) share-base)
-)
-
 ;; @desc - preview how many shares would be received for depositing a given asset amount
 (define-read-only (preview-deposit (assets uint))
-  (convert-to-shares assets)
+  (contract-call? .state convert-to-shares assets)
 )
 
 ;; @desc - preview how many assets would be received for redeeming a given number of shares
 (define-read-only (preview-redeem (shares uint))
-  (convert-to-assets shares)
+  (contract-call? .state convert-to-assets shares)
 )
 
 (define-read-only (get-claim (id uint))
@@ -82,8 +72,8 @@
 ;; @desc - deposit asset to mint shares
 (define-public (deposit (assets uint) (affiliate (optional (buff 64))))
   (let (
-    (state (contract-call? .state get-deposit-state))
-    (shares (preview-deposit assets))
+    (state (contract-call? .state get-deposit-state assets))
+    (shares (get shares state))
   )
     (try! (contract-call? .blacklist check-is-not-soft contract-caller))
     (try! (contract-call? .state check-is-deposit-active))
