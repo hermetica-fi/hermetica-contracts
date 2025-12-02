@@ -165,7 +165,7 @@
       ;; Redeem from Zest vault (burns vault shares (z-tokens), receives underlying tokens)
       (received (try! (as-contract (contract-call? vault-trait redeem shares min-amount reserve))))
     )
-      (print { action: "zest-redeem", user: contract-caller, data: { vault: vault-trait, shares: shares, min-amount: min-amount, amount: received } })
+      (print { action: "zest-redeem", user: contract-caller, data: { vault: vault-trait, shares: shares, collateral: { min-amount: min-amount, received: received } } })
       (ok received)
     )
   )

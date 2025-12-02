@@ -14,9 +14,50 @@
 ;;-------------------------------------
 
 (define-constant ERR_INVALID_AMOUNT (err u120001))
-(define-constant ERR_INVALID_TOKEN (err u120002))
+(define-constant ERR_NOT_BORROW_TOKEN (err u120002))
 
 (define-constant usdh-token .usdh-token)
+
+;;-------------------------------------
+;; Maps
+;;-------------------------------------
+
+(define-map borrow-token 
+  { 
+    address: principal 
+  } 
+  { 
+    active: bool 
+  }
+)
+
+;;-------------------------------------
+;; Borrow Token Management
+;;-------------------------------------
+
+;; @desc - Get the active status of a borrow token
+(define-read-only (get-borrow-token (address principal))
+  (default-to
+    { active: false }
+    (map-get? borrow-token { address: address })
+  )
+)
+
+;; @desc - Check if a borrow token is active
+(define-read-only (check-is-borrow-token (address principal))
+  (ok (asserts! (get active (get-borrow-token address)) ERR_NOT_BORROW_TOKEN))
+)
+
+;; @desc - Set the active status of a borrow token (owner only)
+(define-public (set-borrow-token (address principal) (active bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-standard address))
+    (try! (contract-call? .state check-is-asset address))
+    (print { action: "set-borrow-token", user: contract-caller, data: { address: address, old: (get-borrow-token address), new: { active: active } } })
+    (ok (map-set borrow-token { address: address } { active: active }))
+  )
+)
 
 ;;-------------------------------------
 ;; Helper Functions (Common to Both Paths)
@@ -29,8 +70,8 @@
   (borrow-amount uint)
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
-    ;; Validate that borrow token is the canonical borrow token
-    (asserts! (is-eq (contract-of borrow-token-trait) usdh-token) ERR_INVALID_TOKEN)
+    ;; Validate that borrow token is a borrow token
+    (try! (check-is-borrow-token (contract-of borrow-token-trait)))
     ;; Borrow asset from Zest v2 market
     (try! (contract-call? .zest-interface zest-borrow market-trait borrow-token-trait borrow-amount price-feed-1 price-feed-2))
     ;; Stake the borrowed asset into Hermetica
@@ -63,11 +104,12 @@
   (let (
     ;; Unstake asset from Hermetica (instant withdrawal)
     (repay-amount (try! (contract-call? .hermetica-interface hermetica-unstake-and-withdraw staked-amount staking-trait staking-silo-trait))))
-    ;; Validate that repay token is the canonical borrow token
-    (asserts! (is-eq (contract-of repay-token-trait) usdh-token) ERR_INVALID_TOKEN)
+    ;; Validate that repay token is a borrow token
+    (try! (check-is-borrow-token (contract-of repay-token-trait)))
     ;; Repay loan to Zest v2 market
     (try! (contract-call? .zest-interface zest-repay market-trait repay-token-trait repay-amount price-feed-1 price-feed-2))
-    (ok repay-amount)  )
+    (ok repay-amount)
+  )
 )
 
 ;; @desc - Unstakes asset from Hermetica and repays loan to Zest v2 market
@@ -212,7 +254,7 @@
       (try! (contract-call? .zest-interface zest-collateral-remove market-trait vault-trait collateral-amount none none))
 
       ;; Step 3: Redeem collateral from vault (burn z-tokens, get actual collateral amount)
-      (try! (contract-call? .zest-interface zest-redeem vault-trait collateral-token-trait collateral-amount min-collateral-amount))
+      (try! (contract-call? .zest-interface zest-redeem vault-trait collateral-amount min-collateral-amount))
 
       ;; Step 4: Optional - Fund claims with collateral now in reserve
       (if (> (len claim-ids) u0)
@@ -222,7 +264,7 @@
         )
         true)
 
-      (print { action: "zest-close-remove-redeem", user: contract-caller, data: { collateral: { token: collateral-token-trait, amount: collateral-amount, min-amount: min-collateral-amount }, staked-amount: staked-amount, repay: { token: repay-token-trait, amount: repay-amount }, claim-ids: claim-ids } })
+    (print { action: "zest-close-remove-redeem", user: contract-caller, data: { collateral: { amount: collateral-amount, min-amount: min-collateral-amount }, staked-amount: staked-amount, repay: { token: repay-token-trait, amount: repay-amount }, claim-ids: claim-ids } })
       (ok true)
     )
   )
