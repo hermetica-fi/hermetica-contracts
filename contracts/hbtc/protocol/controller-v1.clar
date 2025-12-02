@@ -48,12 +48,12 @@
 
     (if is-profit
       ;; Handle profit and zero scenario -> token price increases
-      (try! (handle-profit reward is-positive total-rf pending-rf perf-fee mgmt-fee reserve-rate))
+      (try! (handle-profit reward total-rf pending-rf perf-fee mgmt-fee reserve-rate))
       
       ;; Handle loss scenarios
       (if (<= req-rf total-rf)
           ;; Reserve-fund can cover the loss -> token price does not change
-          (try! (handle-loss-covered reward is-positive total-rf pending-rf req-rf u0 mgmt-fee))
+          (try! (handle-loss-covered reward is-positive total-rf pending-rf mgmt-fee))
 
           ;; Reserve-fund cannot cover the loss -> token price decreases
           (try! (handle-loss-exceeds reward is-positive total-rf pending-rf req-rf u0 mgmt-fee))
@@ -98,7 +98,7 @@
 
 ;; @desc - Handle profit scenario
 (define-private (handle-profit 
-  (reward uint) (is-positive bool)
+  (reward uint)
   (total-rf uint) (pending-rf uint)
   (perf-fee uint) (mgmt-fee uint)
   (reserve-rate uint))
@@ -127,21 +127,19 @@
 (define-private (handle-loss-covered 
   (reward uint) (is-positive bool)
   (total-rf uint) (pending-rf uint)
-  (req-rf uint)
-  (perf-fee uint) (mgmt-fee uint))
+  (mgmt-fee uint))
   (let (
+    (req-rf (if is-positive (- mgmt-fee reward) (+ mgmt-fee reward)))
     (transfer-amount (if (> req-rf pending-rf) (- req-rf pending-rf) u0))
-    (rf-decrease (if (> transfer-amount u0) pending-rf req-rf))
-    (reward-delta (if is-positive
-      { reward: (+ reward transfer-amount), is-add: true }
-      (if (>= reward transfer-amount)
-        { reward: (- reward transfer-amount), is-add: false }
-        { reward: (- transfer-amount reward), is-add: true })))
-  )
+    (pending-rf-decrease (- req-rf transfer-amount))
+    (delta (if (> mgmt-fee pending-rf-decrease)
+              { asset-delta: (- mgmt-fee pending-rf-decrease), is-add: true}
+              { asset-delta: (- pending-rf-decrease mgmt-fee), is-add: false}))
+    )
     (print {
       action: "log-reward",
       user: contract-caller,
-      data: { case: "loss-covered", reward: { gross: reward, net: (get reward reward-delta), rf: transfer-amount, is-positive: is-positive, is-add: (get is-add reward-delta) }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: (- total-rf req-rf), required: req-rf } }
+      data: { case: "loss-covered", reward: { gross: reward, net: (get asset-delta delta), rf: transfer-amount, is-positive: is-positive, is-add: (get is-add delta) }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: (- total-rf req-rf), required: req-rf } }
     })
     
     ;; Physical transfer if needed
@@ -153,9 +151,9 @@
     ;; Single batch call with commit-reward logic (net reward = 0)
     (try! (contract-call? .state update-state 
       (list
-        { type: "pending-rf", amount: rf-decrease, is-add: false }
+        { type: "pending-rf", amount: pending-rf-decrease, is-add: false }
         { type: "pending-fees", amount: mgmt-fee, is-add: true })
-      (some { reward: (get reward reward-delta), is-add: (get is-add reward-delta) })
+      (some { reward: (get asset-delta delta), is-add: (get is-add delta) })
       none))
     (ok true) 
   )

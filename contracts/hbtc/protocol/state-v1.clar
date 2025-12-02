@@ -66,7 +66,8 @@
 (define-data-var max-deviation uint u5)                           ;; [5 bps] => 0.05% - max share price deviation per update
 (define-data-var reserve-rate uint u500)                          ;; [500 bps] => 5.00% - reserve fund allocation rate from profits (log-reward)
 (define-data-var deposit-cap uint u0)                             ;; [8 decimals] - maximum total vault capacity
-(define-data-var min-amount uint u0)                              ;; [8 decimals] - minimum deposit amount
+(define-data-var min-deposit uint u100)                           ;; [8 decimals] - minimum deposit amount
+(define-data-var min-redeem uint u100)                            ;; [8 decimals] - minimum redeem amount
 (define-data-var cooldown uint u259200)                           ;; [259200 seconds] => 3 days - default redeem cooldown period
 (define-data-var express-cooldown uint u3600)                     ;; [3600 seconds] => 1 hour - express redeem cooldown period
 (define-data-var update-window uint u82800)                       ;; [82800 seconds] => 23 hours - min time between reward updates
@@ -187,8 +188,12 @@
   (var-get deposit-cap)
 )
 
-(define-read-only (get-min-amount)
-  (var-get min-amount)
+(define-read-only (get-min-deposit)
+  (var-get min-deposit)
+)
+
+(define-read-only (get-min-redeem)
+  (var-get min-redeem)
 )
 
 (define-read-only (get-max-reward)
@@ -300,12 +305,12 @@
 
 ;; @desc - Batch getter for deposit operation - returns all state needed for deposit validation
 (define-read-only (get-deposit-state)
-  { share-price: (get-share-price), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-amount: (get-min-amount) }
+  { share-price: (get-share-price), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-deposit: (get-min-deposit) }
 )
 
 ;; @desc - Batch getter for redeem operation - returns all data needed
 (define-read-only (get-redeem-state (user principal) (is-express bool))
-  { share-price: (get-share-price), exit-fee: (get-custom-exit-fee user is-express), cooldown: (get-custom-cooldown user is-express) }
+  { share-price: (get-share-price), exit-fee: (get-custom-exit-fee user is-express), cooldown: (get-custom-cooldown user is-express), min-redeem: (get-min-redeem) }
 )
 
 ;;-------------------------------------
@@ -642,11 +647,21 @@
   )
 )
 
-(define-public (set-min-amount (new-min-amount uint))
+(define-public (set-min-deposit (new-min-deposit uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (print { action: "set-min-amount", user: contract-caller, data: { old: (get-min-amount), new: new-min-amount } })
-    (ok (var-set min-amount new-min-amount))
+    (asserts! (> new-min-deposit u0) ERR_BELOW_MIN)
+    (print { action: "set-min-deposit", user: contract-caller, data: { old: (get-min-deposit), new: new-min-deposit } })
+    (ok (var-set min-deposit new-min-deposit))
+  )
+)
+
+(define-public (set-min-redeem (new-min-redeem uint))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (asserts! (> new-min-redeem u0) ERR_BELOW_MIN)
+    (print { action: "set-min-redeem", user: contract-caller, data: { old: (get-min-redeem), new: new-min-redeem } })
+    (ok (var-set min-redeem new-min-redeem))
   )
 )
 
@@ -788,7 +803,8 @@
   (let (
     (token-address (contract-of token))
     (token-base (pow u10 (unwrap-panic (contract-call? token get-decimals))))
-    (new-entry { active: false, ts: (some (get-current-ts)), price-feed-id: price-feed-id, token-base: token-base, max-slippage: max-slippage, is-stablecoin: is-stablecoin })
+    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-activation-delay)))
+    (new-entry { active: false, ts: (some activation-ts), price-feed-id: price-feed-id, token-base: token-base, max-slippage: max-slippage, is-stablecoin: is-stablecoin })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (asserts! (<= max-slippage (get slippage max) ) ERR_ABOVE_MAX)
@@ -833,7 +849,8 @@
 
 (define-public (request-new-contract (address principal))
   (let (
-    (new-entry { active: false, ts: (some (get-current-ts)) })
+    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-activation-delay)))
+    (new-entry { active: false, ts: (some activation-ts) })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (try! (contract-call? .hq-hbtc check-is-standard address))

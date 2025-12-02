@@ -89,7 +89,7 @@
 (define-read-only (check-is-not-soft (address principal))
   (ok (if (get-soft-blacklist-active)
     (asserts! (not (get-soft-blacklist address)) ERR_SOFT_BLACKLISTED)
-    true
+    (try! (check-is-not-full address))
   ))
 )
 

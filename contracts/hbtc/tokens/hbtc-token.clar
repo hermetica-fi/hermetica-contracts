@@ -59,14 +59,14 @@
 
 (define-public (set-token-name (value (string-ascii 32)))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-owner tx-sender))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (ok (var-set token-name value))
   )
 )
 
 (define-public (set-token-uri (value (string-utf8 256)))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-owner tx-sender))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (ok (var-set token-uri value))
   )
 )
