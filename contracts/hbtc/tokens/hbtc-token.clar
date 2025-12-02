@@ -14,6 +14,7 @@
 
 (define-data-var token-name (string-ascii 32) "Hermetica hBTC")
 (define-data-var token-uri (string-utf8 256) u"")
+(define-data-var blacklist-enabled bool false)
 
 ;;-------------------------------------
 ;; SIP-010
@@ -43,9 +44,19 @@
   (ok (some (var-get token-uri)))
 )
 
+(define-read-only (get-blacklist-enabled)
+  (var-get blacklist-enabled)
+)
+
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
   (begin
     (asserts! (or (is-eq sender tx-sender) (is-eq sender contract-caller)) ERR_NOT_AUTHORIZED)
+
+    (if (var-get blacklist-enabled)
+      (try! (contract-call? .blacklist check-is-not-full-two sender recipient))
+      true
+    )
+
     (try! (ft-transfer? hBTC amount sender recipient))
     (match memo val (print val) 0x)
     (print { action: "transfer", data: { sender: sender, recipient: recipient, amount: amount, block-height: stacks-block-height } })
@@ -56,6 +67,14 @@
 ;;-------------------------------------
 ;; Admin
 ;;-------------------------------------
+
+(define-public (set-blacklist-enabled (value bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (print { action: "set-blacklist-enabled", user: contract-caller, data: { old-value: (var-get blacklist-enabled), new-value: value } })
+    (ok (var-set blacklist-enabled value))
+  )
+)
 
 (define-public (set-token-name (value (string-ascii 32)))
   (begin
