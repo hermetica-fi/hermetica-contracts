@@ -48,24 +48,14 @@
 ;; Getters
 ;;-------------------------------------
 
-;; @desc - calculate how many shares (hBTC tokens) you'd get for a given asset amount
-(define-read-only (convert-to-shares (assets uint))
-  (/ (* assets share-base) (contract-call? .state get-share-price))
-)
-
-;; @desc - calculate how many assets (sBTC) a given number of shares is worth
-(define-read-only (convert-to-assets (shares uint))
-  (/ (* shares (contract-call? .state get-share-price)) share-base)
-)
-
 ;; @desc - preview how many shares would be received for depositing a given asset amount
 (define-read-only (preview-deposit (assets uint))
-  (convert-to-shares assets)
+  (contract-call? .state convert-to-shares assets)
 )
 
 ;; @desc - preview how many assets would be received for redeeming a given number of shares
 (define-read-only (preview-redeem (shares uint))
-  (convert-to-assets shares)
+  (contract-call? .state convert-to-assets shares)
 )
 
 (define-read-only (get-claim (id uint))
@@ -83,8 +73,8 @@
 ;; @desc - deposit asset to mint shares
 (define-public (deposit (assets uint) (affiliate (optional (buff 64))))
   (let (
-    (state (contract-call? .state get-deposit-state))
-    (shares (preview-deposit assets))
+    (state (contract-call? .state get-deposit-state assets))
+    (shares (get shares state))
   )
     (try! (contract-call? .blacklist check-is-not-soft contract-caller))
     (try! (contract-call? .state check-is-deposit-active))
@@ -170,6 +160,7 @@
   )
     (asserts! (>= (get-current-ts) (get ts current-claim)) ERR_NOT_COOLED_DOWN)
     (asserts! (get is-funded current-claim) ERR_NOT_FUNDED)
+    (try! (contract-call? .blacklist check-is-not-soft user))
     (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer assets-net this-contract user none)))
     (if (> fee u0)
       (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer fee this-contract fee-collector none)))
@@ -209,7 +200,7 @@
     (is-manager (get manager (contract-call? .hq-hbtc get-keeper contract-caller)))
     (share-price (contract-call? .state get-share-price))
     (claim (try! (get-claim claim-id)))
-    (result (try! (process-claim claim-id claim share-price is-manager)))
+    (result (try! (process-claim claim-id claim share-price (some is-manager))))
     (assets (get assets result))
     (shares (get shares result))
   )
@@ -228,11 +219,11 @@
 ;; @desc - Optimized batch funding of claims
 (define-public (fund-claim-many (claim-ids (list 1000 uint)))
   (let (
-    (is-manager (get manager (contract-call? .hq-hbtc get-keeper contract-caller)))
     (share-price (contract-call? .state get-share-price))
-    (initial-accum { total-shares: u0, total-assets: u0, share-price: share-price, is-manager: is-manager })
+    (initial-accum { total-shares: u0, total-assets: u0, share-price: share-price })
   )
     (asserts! (> (len claim-ids) u0) ERR_EMPTY_LIST)
+    (try! (contract-call? .hq-hbtc check-is-manager contract-caller))
     (match (fold fund-claim-iter claim-ids (ok initial-accum))
       accum
         (let ((total-assets-accum (get total-assets accum)))
@@ -253,17 +244,16 @@
 )
 
 ;; @desc - Iterator function for fund-claim-many that processes each claim and accumulates totals
-(define-private (fund-claim-iter (claim-id uint) (prev (response { total-shares: uint, total-assets: uint, share-price: uint, is-manager: bool } uint)))
+(define-private (fund-claim-iter (claim-id uint) (prev (response { total-shares: uint, total-assets: uint, share-price: uint } uint)))
   (match prev
     accum
       (match (map-get? claims { claim-id: claim-id }) claim
         ;; Claim exists, process it
-        (let ( (result (try! (process-claim claim-id claim (get share-price accum) (get is-manager accum)))))
+        (let ( (result (try! (process-claim claim-id claim (get share-price accum) none))))
           (ok { 
             total-shares: (+ (get total-shares accum) (get shares result)),
             total-assets: (+ (get total-assets accum) (get assets result)),
-            share-price: (get share-price accum),
-            is-manager: (get is-manager accum)
+            share-price: (get share-price accum)
           }))
         ;; Claim doesn't exist, skip it and continue
         (begin
@@ -280,19 +270,23 @@
   (claim-id uint)
   (claim { shares: uint, assets: uint, fee: uint, fee-bps: uint, ts: uint, is-funded: bool, user: principal }) 
   (share-price uint)
-  (is-manager bool))
+  (maybe-manager (optional bool)))
   (let (
     (shares (get shares claim))
     (is-cooled-down (>= (get-current-ts) (get ts claim)))
     (assets (/ (* shares share-price) share-base))
     (fee (/ (* assets (get fee-bps claim)) bps-base))
   )
+    (asserts! (> assets u0) ERR_BELOW_MIN)
     (asserts! (not (get is-funded claim)) ERR_ALREADY_FUNDED)
-    (asserts! (or is-manager is-cooled-down) ERR_NOT_COOLED_DOWN)
+    (match maybe-manager
+      is-manager (asserts! (or is-manager is-cooled-down) ERR_NOT_COOLED_DOWN)
+      true
+    )
 
     ;; Update claim with calculated assets and fee, mark as funded
     (map-set claims { claim-id: claim-id } (merge claim { assets: assets, fee: fee, is-funded: true }))
-    (print { action: "process-claim", user: contract-caller, data: { claim-id: claim-id, shares: shares, assets: assets, fee: fee, share-price: share-price, claimed-by-manager: is-manager } })
+    (print { action: "process-claim", user: contract-caller, data: { claim-id: claim-id, shares: shares, assets: assets, fee: fee, share-price: share-price, manager: maybe-manager } })
     (ok { shares: shares, assets: assets })
   )
 )

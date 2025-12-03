@@ -187,7 +187,7 @@
 ;; @desc - Closes a leveraged position using vault path
 (define-public (zest-close-remove-redeem
   (market-trait <zest-market>) (vault-trait <zest-vault>) (staking-trait <staking>) (staking-silo-trait <staking-silo>) (hbtc-vault-trait <hbtc-vault>)
-  (sbtc-token-trait <ft>) (usdh-token-trait <ft>)
+  (usdh-token-trait <ft>)
   (susdh-amount uint) (collateral-amount uint) (min-sbtc-amount uint)
   (claim-ids (list 1000 uint))
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
@@ -203,7 +203,7 @@
     (try! (contract-call? .zest-interface zest-collateral-remove market-trait vault-trait collateral-amount none none))
     
     ;; Step 3: Redeem sBTC from vault (burn z-tokens, get actual sBTC amount)
-    (try! (contract-call? .zest-interface zest-redeem vault-trait sbtc-token-trait collateral-amount min-sbtc-amount))
+    (try! (contract-call? .zest-interface zest-redeem vault-trait collateral-amount min-sbtc-amount))
     
     ;; Step 4: Optional - Fund claims with sBTC now in reserve
     (if (> (len claim-ids) u0)

@@ -31,7 +31,7 @@
     (try! (contract-call? .reserve transfer asset-trait amount this-contract))
     
     ;; Add collateral to Zest market and capture new total amount
-    (let ((total (try! (as-contract (contract-call? market-trait collateral-add asset-trait amount this-contract)))))
+    (let ((total (try! (as-contract (contract-call? market-trait collateral-add asset-trait amount)))))
       (print { action: "zest-collateral-add", user: contract-caller, data: { market: market-trait, asset: asset-trait, amount: amount, total: total } })
       (ok total)
     )
@@ -55,7 +55,7 @@
     (try! (write-feed price-feed-2))
     
     ;; Remove collateral from Zest market and capture remaining amount and transfer tokens back to reserve
-    (let ((remaining (try! (as-contract (contract-call? market-trait collateral-remove asset-trait amount this-contract)))))
+    (let ((remaining (try! (as-contract (contract-call? market-trait collateral-remove asset-trait amount (some this-contract))))))
       (try! (as-contract (contract-call? asset-trait transfer amount this-contract reserve none)))
       (print { action: "zest-collateral-remove", user: contract-caller, data: { market: market-trait, asset: asset-trait, amount: amount, remaining: remaining } })
       (ok remaining)
@@ -84,7 +84,7 @@
     (try! (write-feed price-feed-2))
     
     ;; Borrow from Zest market (debt recorded under this interface contract)
-    (try! (as-contract (contract-call? market-trait borrow asset-trait amount this-contract)))
+    (try! (as-contract (contract-call? market-trait borrow asset-trait amount (some this-contract))))
     
     ;; Transfer borrowed tokens to reserve
     (try! (as-contract (contract-call? asset-trait transfer amount this-contract reserve none)))
@@ -113,11 +113,10 @@
     ;; Transfer repayment from reserve to this interface
     (try! (contract-call? .reserve transfer asset-trait amount this-contract))
     
-    ;; Repay to Zest market
-    (try! (as-contract (contract-call? market-trait repay asset-trait amount this-contract)))
-    
-    (print { action: "zest-repay", user: contract-caller, data: { market: market-trait, asset: asset-trait, amount: amount } })
-    (ok true)
+    (let ((repaid-amount (try! (as-contract (contract-call? market-trait repay asset-trait amount (some this-contract))))))
+      (print { action: "zest-repay", user: contract-caller, data: { market: market-trait, asset: asset-trait, amount: amount, repaid-amount: repaid-amount } })
+      (ok repaid-amount)
+    )
   )
 )
 
@@ -136,16 +135,13 @@
     (try! (contract-call? .state check-trading-auth (contract-of vault-trait) none (some (contract-of asset-trait)) none))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     
-    ;; Transfer tokens from reserve to this interface
+    ;; Transfer asset from reserve to this interface
     (try! (contract-call? .reserve transfer asset-trait amount this-contract))
     
-    ;; Deposit to Zest vault (z-tokens minted to this interface contract)
+    ;; Deposit to Zest vault (z-tokens minted directly to reserve)
     (let (
-      (received (try! (as-contract (contract-call? vault-trait deposit amount min-shares this-contract))))
+      (received (try! (as-contract (contract-call? vault-trait deposit amount min-shares reserve))))
     )
-      ;; Transfer z-tokens (vault shares) to reserve
-      (try! (as-contract (contract-call? vault-trait transfer received this-contract reserve none)))
-
       (print { action: "zest-deposit", user: contract-caller, data: { vault: vault-trait, asset: asset-trait, amount: amount, min-shares: min-shares, shares: received } })
       (ok received)
     )
@@ -155,26 +151,21 @@
 ;; @desc - Redeems vault shares from Zest v2 vault
 (define-public (zest-redeem
   (vault-trait <zest-vault>)
-  (asset-trait <ft>)
   (shares uint)
   (min-amount uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
-    (try! (contract-call? .state check-trading-auth (contract-of vault-trait) none (some (contract-of asset-trait)) none))
+    (try! (contract-call? .state check-trading-auth (contract-of vault-trait) none none none))
     (asserts! (> shares u0) ERR_INVALID_AMOUNT)
-    
+
     ;; Transfer z-tokens from reserve to this interface
     (try! (contract-call? .reserve transfer vault-trait shares this-contract))
 
-    ;; Get actual amount received
     (let (
       ;; Redeem from Zest vault (burns vault shares (z-tokens), receives underlying tokens)
-      (received (try! (as-contract (contract-call? vault-trait redeem shares min-amount this-contract))))
+      (received (try! (as-contract (contract-call? vault-trait redeem shares min-amount reserve))))
     )
-      ;; Transfer received tokens back to reserve
-      (try! (as-contract (contract-call? asset-trait transfer received this-contract reserve none)))
-      
-      (print { action: "zest-redeem", user: contract-caller, data: { vault: vault-trait, asset: asset-trait, shares: shares, min-amount: min-amount, amount: received } })
+      (print { action: "zest-redeem", user: contract-caller, data: { vault: vault-trait, shares: shares, min-amount: min-amount, amount: received } })
       (ok received)
     )
   )
