@@ -208,7 +208,8 @@
   (let (
     (is-manager (get manager (contract-call? .hq-hbtc get-keeper contract-caller)))
     (share-price (contract-call? .state get-share-price))
-    (result (try! (process-claim claim-id share-price is-manager)))
+    (claim (try! (get-claim claim-id)))
+    (result (try! (process-claim claim-id claim share-price is-manager)))
     (assets (get assets result))
     (shares (get shares result))
   )
@@ -234,15 +235,16 @@
     (asserts! (> (len claim-ids) u0) ERR_EMPTY_LIST)
     (match (fold fund-claim-iter claim-ids (ok initial-accum))
       accum
-        (begin
+        (let ((total-assets-accum (get total-assets accum)))
           ;; Transfer accumulated assets from reserve to vault in a single batch and update state
-          (try! (contract-call? .reserve transfer sbtc-token (get total-assets accum) this-contract))
+          (asserts! (> total-assets-accum u0) ERR_EMPTY_LIST)
+          (try! (contract-call? .reserve transfer sbtc-token total-assets-accum this-contract))
           (try! (contract-call? .state update-state
             (list
-              { type: "total-assets", amount: (get total-assets accum), is-add: false })
+              { type: "total-assets", amount: total-assets-accum, is-add: false })
             none
             (some { amount: (get total-shares accum), is-add: false, user: this-contract })))
-          (print { action: "fund-claim-many", user: contract-caller, data: { total-shares: (get total-shares accum), total-assets: (get total-assets accum) } })
+          (print { action: "fund-claim-many", user: contract-caller, data: { total-shares: (get total-shares accum), total-assets: total-assets-accum } })
           (ok true)
         )
       error (err error)
@@ -254,18 +256,20 @@
 (define-private (fund-claim-iter (claim-id uint) (prev (response { total-shares: uint, total-assets: uint, share-price: uint, is-manager: bool } uint)))
   (match prev
     accum
-      (let (
-        (result (try! (process-claim 
-          claim-id 
-          (get share-price accum)
-          (get is-manager accum))))
-      )
-        (ok { 
-          total-shares: (+ (get total-shares accum) (get shares result)),
-          total-assets: (+ (get total-assets accum) (get assets result)),
-          share-price: (get share-price accum),
-          is-manager: (get is-manager accum)
-        })
+      (match (map-get? claims { claim-id: claim-id }) claim
+        ;; Claim exists, process it
+        (let ( (result (try! (process-claim claim-id claim (get share-price accum) (get is-manager accum)))))
+          (ok { 
+            total-shares: (+ (get total-shares accum) (get shares result)),
+            total-assets: (+ (get total-assets accum) (get assets result)),
+            share-price: (get share-price accum),
+            is-manager: (get is-manager accum)
+          }))
+        ;; Claim doesn't exist, skip it and continue
+        (begin
+          (print { action: "claim-not-found", user: contract-caller, data: { claim-id: claim-id } })
+          (ok accum)
+        )
       )
     error (err error)
   )
@@ -273,11 +277,11 @@
 
 ;; @desc - Processes a single claim for funding (validates, calculates assets/fee, updates claim map)
 (define-private (process-claim 
-  (claim-id uint) 
+  (claim-id uint)
+  (claim { shares: uint, assets: uint, fee: uint, fee-bps: uint, ts: uint, is-funded: bool, user: principal }) 
   (share-price uint)
   (is-manager bool))
   (let (
-    (claim (try! (get-claim claim-id)))
     (shares (get shares claim))
     (is-cooled-down (>= (get-current-ts) (get ts claim)))
     (assets (/ (* shares share-price) share-base))
