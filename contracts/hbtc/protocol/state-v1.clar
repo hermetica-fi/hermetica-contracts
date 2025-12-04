@@ -597,12 +597,23 @@
   )
 )
 
-(define-public (set-custom-exit-fee (address principal) (exit-fee uint))
+(define-private (set-custom-exit-fee-iter (entry { address: principal, new-exit-fee: uint }) (prev (response bool uint)))
+  (let (
+    (address (get address entry))
+    (new-exit-fee (get new-exit-fee entry))
+  )
+    (try! prev)
+    (asserts! (<= new-exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
+    (print { action: "set-custom-exit-fee-iter", user: contract-caller, data: { address: address, old: (get-custom-exit-fee address false), new: new-exit-fee } })
+    (ok (map-set custom-exit-fee { address: address } { exit-fee: new-exit-fee }))
+  )
+)
+
+(define-public (set-custom-exit-fee (entries (list 200 { address: principal, new-exit-fee: uint })))
   (begin
     (try! (contract-call? .hq-hbtc check-is-fee-setter contract-caller))
-    (asserts! (<= exit-fee (get exit-fee max) ) ERR_ABOVE_MAX)
-    (print { action: "set-custom-exit-fee", user: contract-caller, data: { address: address, old: (get-custom-exit-fee address false), new: exit-fee } })
-    (ok (map-set custom-exit-fee { address: address } { exit-fee: exit-fee }))
+    (print { action: "set-custom-exit-fee", user: contract-caller, data: { entries: entries } })
+    (fold set-custom-exit-fee-iter entries (ok true))
   )
 )
 
@@ -637,12 +648,23 @@
   )
 )
 
-(define-public (set-custom-cooldown (address principal) (new-cooldown uint))
+(define-private (set-custom-cooldown-iter (entry { address: principal, new-cooldown: uint }) (prev (response bool uint)))
+  (let (
+    (address (get address entry))
+    (new-cooldown (get new-cooldown entry))
+  )
+    (try! prev)
+    (asserts! (<= new-cooldown (get cooldown max)) ERR_ABOVE_MAX)
+    (print { action: "set-custom-cooldown-iter", user: contract-caller, data: { address: address, old: (get-custom-cooldown address false), new: new-cooldown } })
+    (ok (map-set custom-cooldown { address: address } { cooldown: new-cooldown }))
+  )
+)
+
+(define-public (set-custom-cooldown (entries (list 200 { address: principal, new-cooldown: uint })))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (asserts! (<= new-cooldown (get cooldown max) ) ERR_ABOVE_MAX)
-    (print { action: "set-custom-cooldown", user: contract-caller, data: { address: address, old: (get-custom-cooldown address false), new: new-cooldown } })
-    (ok (map-set custom-cooldown {  address: address } { cooldown: new-cooldown }))
+    (print { action: "set-custom-cooldown", user: contract-caller, data: { entries: entries } })
+    (fold set-custom-cooldown-iter entries (ok true))
   )
 )
 
