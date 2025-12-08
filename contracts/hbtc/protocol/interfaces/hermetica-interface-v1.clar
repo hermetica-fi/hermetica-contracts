@@ -15,7 +15,6 @@
 ;;-------------------------------------
 
 (define-constant ERR_INVALID_AMOUNT (err u110001))
-(define-constant ERR_INSUFFICIENT_BALANCE (err u110002))
 
 (define-constant this-contract (as-contract tx-sender))
 (define-constant usdh-base u100000000)                          ;; 10^8 = 100000000 (usdh token base)
@@ -177,7 +176,6 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (asserts! (<= amount (unwrap-panic (contract-call? asset get-balance this-contract))) ERR_INSUFFICIENT_BALANCE)
     (try! (as-contract (contract-call? asset transfer amount this-contract reserve none)))
     (print { action: "sweep", user: contract-caller, data: { asset: asset, amount: amount, sender: this-contract, recipient: reserve } })
     (ok amount)
