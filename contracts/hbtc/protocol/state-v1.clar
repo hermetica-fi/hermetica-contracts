@@ -20,13 +20,12 @@
 (define-constant ERR_WINDOW_CLOSED (err u102010))
 (define-constant ERR_NO_ENTRY (err u102011))
 (define-constant ERR_DUPLICATE (err u102012))
-(define-constant ERR_ACTIVATION (err u102013))
-(define-constant ERR_DEVIATION (err u102014))
-(define-constant ERR_INVALID (err u102015))
-(define-constant ERR_NO_OPERATIONS (err u102016))
-(define-constant ERR_ZERO_SUPPLY (err u102017))
-(define-constant ERR_EXPRESS_DISABLED (err u102018))
-(define-constant ERR_FEE_WINDOW (err u102019))
+(define-constant ERR_DEVIATION (err u102013))
+(define-constant ERR_INVALID (err u102014))
+(define-constant ERR_NO_OPERATIONS (err u102015))
+(define-constant ERR_ZERO_SUPPLY (err u102016))
+(define-constant ERR_EXPRESS_DISABLED (err u102017))
+(define-constant ERR_FEE_WINDOW (err u102018))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
@@ -45,7 +44,6 @@
   update-window: u3600,                                           ;; [3600 seconds] => 1 hour - min time between reward updates
 })
 
-(define-constant pct-base u100)                                   ;; 10^2 = 100 (percentage base)
 (define-constant bps-base u10000)                                 ;; 10^4 = 10000 (basis points base)
 (define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
 (define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
