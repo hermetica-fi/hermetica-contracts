@@ -11,7 +11,6 @@
 
 (define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
 (define-constant pct-base u100)                                 ;; 10^2 = 100 (percentage base)
-(define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
 (define-constant fee-collector .fee-collector)
 (define-constant rf .reserve-fund)
 (define-constant reserve .reserve)
