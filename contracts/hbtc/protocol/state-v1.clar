@@ -739,6 +739,7 @@
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (asserts! (>= new-update-window (get update-window min) ) ERR_BELOW_MIN)
+    (asserts! (<= new-update-window (get-staleness-window-sp)) ERR_ABOVE_MAX)
     (print { action: "set-update-window", user: contract-caller, data: { old: (get-update-window), new: new-update-window } })
     (ok (var-set update-window new-update-window))
   )
