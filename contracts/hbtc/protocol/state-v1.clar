@@ -765,6 +765,7 @@
 (define-public (set-staleness-window-sp (new-staleness-window-sp uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (asserts! (>= new-staleness-window-sp (get-update-window)) ERR_BELOW_MIN)
     (print { action: "set-staleness-window-sp", user: contract-caller, data: { old: (get-staleness-window-sp), new: new-staleness-window-sp } })
     (ok (var-set staleness-window-sp new-staleness-window-sp))
   )
