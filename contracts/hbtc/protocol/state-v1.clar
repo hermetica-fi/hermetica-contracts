@@ -9,7 +9,7 @@
 ;;-------------------------------------
 
 (define-constant ERR_NOT_ASSET (err u102001))
-(define-constant ERR_NOT_CONTRACT (err u102002))
+(define-constant ERR_NOT_EXTERNAL (err u102002))
 (define-constant ERR_TRANSFER_DISABLED (err u102003))
 (define-constant ERR_VAULT_DISABLED (err u102004))
 (define-constant ERR_DEPOSIT_DISABLED (err u102005))
@@ -106,7 +106,7 @@
 )
 
 ;; external contracts that the vault can interact with 
-(define-map contracts 
+(define-map externals 
   {
     address: principal                                            ;; external contract address
   }
@@ -283,10 +283,10 @@
   )
 )
 
-(define-read-only (get-contract (address principal))
+(define-read-only (get-external (address principal))
   (default-to 
     { active: false, ts: none } 
-    (map-get? contracts { address: address })
+    (map-get? externals { address: address })
   )
 )
 
@@ -388,8 +388,8 @@
   (ok (asserts! (get active (get-asset address)) ERR_NOT_ASSET))
 )
 
-(define-read-only (check-is-contract (address principal))
-  (ok (asserts! (get active (get-contract address)) ERR_NOT_CONTRACT))
+(define-read-only (check-is-external (address principal))
+  (ok (asserts! (get active (get-external address)) ERR_NOT_EXTERNAL))
 )
 
 (define-read-only (check-update-window)
@@ -400,11 +400,11 @@
     (ok (asserts! (<= amount (/ (* (get-max-reward) (get-total-assets)) bps-base)) ERR_ABOVE_MAX))
 )
 
-(define-read-only (check-trading-auth (contract-1 principal) (contract-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
+(define-read-only (check-trading-auth (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
   (begin
     (try! (check-is-trading-active))
-    (try! (check-is-contract contract-1))
-    (match contract-2 value (try! (check-is-contract value)) true)
+    (try! (check-is-external address-1))
+    (match address-2 value (try! (check-is-external value)) true)
     (match asset-1 value (try! (check-is-asset value)) true)
     (ok (match asset-2 value (try! (check-is-asset value)) true))
   )
@@ -885,35 +885,35 @@
   )
 )
 
-(define-public (request-new-contract (address principal))
+(define-public (request-new-external (address principal))
   (let (
     (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-activation-delay)))
     (new-entry { active: false, ts: (some activation-ts) })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (try! (contract-call? .hq-hbtc check-is-standard address))
-    (print { action: "request-new-contract", user: contract-caller, data: { address: address, old: (get-contract address), new: new-entry } })
-    (ok (asserts! (map-insert contracts { address: address } new-entry) ERR_DUPLICATE))
+    (print { action: "request-new-external", user: contract-caller, data: { address: address, old: (get-external address), new: new-entry } })
+    (ok (asserts! (map-insert externals { address: address } new-entry) ERR_DUPLICATE))
   )
 )
 
-(define-public (remove-contract (address principal))
+(define-public (remove-external (address principal))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (print { action: "remove-contract", user: contract-caller, data: { address: address, old: (get-contract address) } })
-    (ok (map-delete contracts { address: address }))
+    (print { action: "remove-external", user: contract-caller, data: { address: address, old: (get-external address) } })
+    (ok (map-delete externals { address: address }))
   )
 )
 
-(define-public (activate-contract (address principal))
+(define-public (activate-external (address principal))
   (let (
-    (entry (get-contract address))
+    (entry (get-external address))
     (ts (unwrap! (get ts entry) ERR_NO_ENTRY))
     (updated-entry (merge entry { active: true }))
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (try! (contract-call? .hq-hbtc check-activation-delay ts))
-    (print { action: "activate-contract", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
-    (ok (map-set contracts { address: address } updated-entry))
+    (print { action: "activate-external", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
+    (ok (map-set externals { address: address } updated-entry))
   )
 )
