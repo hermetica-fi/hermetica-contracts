@@ -109,7 +109,7 @@
     (asserts! (> borrow-amount u0) ERR_INVALID_AMOUNT)
 
     ;; Step 1: Add collateral directly
-    (try! (contract-call? .zest-interface zest-collateral-add market collateral-token collateral-amount))
+    (try! (contract-call? .zest-interface zest-collateral-add market collateral-token collateral-amount none))
 
     ;; Step 2: Borrow asset and stake it in Hermetica
     (try! (zest-open-internal market staking borrow-token borrow-amount price-feed-1 price-feed-2))
@@ -179,7 +179,7 @@
       (z-tokens-received (try! (contract-call? .zest-interface zest-deposit vault collateral-token collateral-amount min-shares))))
       
       ;; Step 1b: Add z-tokens as collateral to Zest market
-      (try! (contract-call? .zest-interface zest-collateral-add market vault z-tokens-received))
+      (try! (contract-call? .zest-interface zest-collateral-add market vault z-tokens-received none))
 
       ;; Step 2: Borrow asset and stake it in Hermetica
       (try! (zest-open-internal market staking borrow-token borrow-amount price-feed-1 price-feed-2))

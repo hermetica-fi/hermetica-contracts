@@ -8,9 +8,7 @@
 
 (define-constant ERR_INVALID_AMOUNT (err u111001))
 
-(define-constant this-contract (as-contract tx-sender))
 (define-constant reserve .reserve)
-
 
 ;;-------------------------------------
 ;; Trader - Collateral Management
@@ -20,17 +18,18 @@
 (define-public (zest-collateral-add
   (market <zest-market>)
   (asset <ft>)
-  (amount uint))
+  (amount uint)
+  (price-feeds (optional (list 3 (buff 8192)))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of market) none (some (contract-of asset)) none))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
 
     ;; Transfer tokens from reserve to this interface
-    (try! (contract-call? .reserve transfer asset amount this-contract))
+    (try! (contract-call? .reserve transfer asset amount current-contract))
     
     ;; Add collateral to Zest market and capture new total amount
-    (let ((total (try! (as-contract (contract-call? market collateral-add asset amount)))))
+    (let ((total (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-add asset amount price-feeds))))))
       (print { action: "zest-collateral-add", user: contract-caller, data: { market: market, asset: asset, amount: amount, total: total } })
       (ok total)
     )
@@ -54,8 +53,8 @@
     (try! (write-feed price-feed-2))
     
     ;; Remove collateral from Zest market and capture remaining amount and transfer tokens back to reserve
-    (let ((remaining (try! (as-contract (contract-call? market collateral-remove asset amount (some this-contract))))))
-      (try! (as-contract (contract-call? asset transfer amount this-contract reserve none)))
+    (let ((remaining (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-remove asset amount (some current-contract) none))))))
+      (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? asset transfer amount current-contract reserve none))))
       (print { action: "zest-collateral-remove", user: contract-caller, data: { market: market, asset: asset, amount: amount, remaining: remaining } })
       (ok remaining)
     )
@@ -83,10 +82,10 @@
     (try! (write-feed price-feed-2))
     
     ;; Borrow from Zest market (debt recorded under this interface contract)
-    (try! (as-contract (contract-call? market borrow asset amount (some this-contract))))
+    (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market borrow asset amount (some current-contract) none))))
     
     ;; Transfer borrowed tokens to reserve
-    (try! (as-contract (contract-call? asset transfer amount this-contract reserve none)))
+    (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? asset transfer amount current-contract reserve none))))
     
     (print { action: "zest-borrow", user: contract-caller, data: { market: market, asset: asset, amount: amount } })
     (ok true)
@@ -110,9 +109,9 @@
     (try! (write-feed price-feed-2))
     
     ;; Transfer repayment from reserve to this interface
-    (try! (contract-call? .reserve transfer asset amount this-contract))
+    (try! (contract-call? .reserve transfer asset amount current-contract))
     
-    (let ((repaid-amount (try! (as-contract (contract-call? market repay asset amount (some this-contract))))))
+    (let ((repaid-amount (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market repay asset amount (some current-contract)))))))
       (print { action: "zest-repay", user: contract-caller, data: { market: market, asset: asset, amount: amount, repaid-amount: repaid-amount } })
       (ok repaid-amount)
     )
@@ -135,11 +134,11 @@
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     
     ;; Transfer asset from reserve to this interface
-    (try! (contract-call? .reserve transfer asset amount this-contract))
+    (try! (contract-call? .reserve transfer asset amount current-contract))
     
     ;; Deposit to Zest vault (z-tokens minted directly to reserve)
     (let (
-      (received (try! (as-contract (contract-call? vault deposit amount min-shares reserve))))
+      (received (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? vault deposit amount min-shares reserve)))))
     )
       (print { action: "zest-deposit", user: contract-caller, data: { vault: vault, asset: asset, amount: amount, min-shares: min-shares, shares: received } })
       (ok received)
@@ -158,11 +157,11 @@
     (asserts! (> shares u0) ERR_INVALID_AMOUNT)
 
     ;; Transfer z-tokens from reserve to this interface
-    (try! (contract-call? .reserve transfer vault shares this-contract))
+    (try! (contract-call? .reserve transfer vault shares current-contract))
 
     (let (
       ;; Redeem from Zest vault (burns vault shares (z-tokens), receives underlying tokens)
-      (received (try! (as-contract (contract-call? vault redeem shares min-amount reserve))))
+      (received (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? vault redeem shares min-amount reserve)))))
     )
       (print { action: "zest-redeem", user: contract-caller, data: { vault: vault, shares: shares, collateral: { min-amount: min-amount, received: received } } })
       (ok received)
@@ -180,8 +179,8 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (try! (as-contract (contract-call? asset transfer amount this-contract reserve none)))
-    (print { action: "sweep", user: contract-caller, data: { asset: asset, amount: amount, sender: this-contract, recipient: reserve } })
+    (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? asset transfer amount current-contract reserve none))))
+    (print { action: "sweep", user: contract-caller, data: { asset: asset, amount: amount, sender: current-contract, recipient: reserve } })
     (ok amount)
   )
 )
@@ -201,7 +200,7 @@
           wormhole-core-contract: 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.wormhole-core-v4,
         }
       ))
-      (print { action: "write-feed", user: contract-caller, data: { requested-by: this-contract, oracle: 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-oracle-v4 } })
+      (print { action: "write-feed", user: contract-caller, data: { requested-by: current-contract, oracle: 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-oracle-v4 } })
       (ok true)
     )
     ;; do nothing if none

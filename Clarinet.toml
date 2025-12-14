@@ -187,8 +187,8 @@ epoch = 3.2
 
 [contracts.trading]
 path = 'contracts/hbtc/protocol/trading-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.vault]
 path = 'contracts/hbtc/protocol/vault-v1.clar'
@@ -204,8 +204,8 @@ epoch = 3.2
 
 [contracts.zest-interface]
 path = 'contracts/hbtc/protocol/interfaces/zest-interface-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.granite-interface]
 path = 'contracts/hbtc/protocol/interfaces/granite-interface-v1.clar'
