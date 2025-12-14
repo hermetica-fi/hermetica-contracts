@@ -55,7 +55,7 @@
     
     ;; Remove collateral from Zest market and capture remaining amount and transfer tokens back to reserve
     (let ((remaining (try! (as-contract (contract-call? market collateral-remove asset amount (some this-contract))))))
-      (try! (as-contract (contract-call? asset transfer amount this-contract reserve none)))
+      (try! (contract-call? asset transfer amount this-contract reserve none))
       (print { action: "zest-collateral-remove", user: contract-caller, data: { market: market, asset: asset, amount: amount, remaining: remaining } })
       (ok remaining)
     )
@@ -86,7 +86,7 @@
     (try! (as-contract (contract-call? market borrow asset amount (some this-contract))))
     
     ;; Transfer borrowed tokens to reserve
-    (try! (as-contract (contract-call? asset transfer amount this-contract reserve none)))
+    (try! (contract-call? asset transfer amount this-contract reserve none))
     
     (print { action: "zest-borrow", user: contract-caller, data: { market: market, asset: asset, amount: amount } })
     (ok true)
@@ -180,7 +180,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (try! (as-contract (contract-call? asset transfer amount this-contract reserve none)))
+    (try! (contract-call? asset transfer amount this-contract reserve none))
     (print { action: "sweep", user: contract-caller, data: { asset: asset, amount: amount, sender: this-contract, recipient: reserve } })
     (ok amount)
   )
