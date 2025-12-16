@@ -49,7 +49,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (asserts! (> borrow-amount u0) ERR_INVALID_AMOUNT)
     (try! (zest-open-internal market staking borrow-token borrow-amount price-feed-1 price-feed-2))
-    (print { action: "zest-open", user: contract-caller, data: { borrow: { token: borrow-token, amount: borrow-amount } } })
+    (print { action: "zest-open", user: contract-caller, data: { market: market, staking: staking, borrow: { token: borrow-token, amount: borrow-amount } } })
     (ok true)
   )
 )
@@ -58,11 +58,11 @@
 (define-private (zest-close-internal
   (market <zest-market>) (staking <staking-trait>) (staking-silo <staking-silo-trait>) 
   (repay-token <ft>)
-  (staked-amount uint)
+  (unstake-amount uint)
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (let (
     ;; Unstake asset from Hermetica (instant withdrawal)
-    (repay-amount (try! (contract-call? .hermetica-interface hermetica-unstake-and-withdraw staked-amount staking staking-silo)))
+    (repay-amount (try! (contract-call? .hermetica-interface hermetica-unstake-and-withdraw unstake-amount staking staking-silo)))
   )
     ;; Validate that repay token is the canonical borrow token
     (asserts! (is-eq (contract-of repay-token) usdh-token) ERR_INVALID_TOKEN)
@@ -76,15 +76,15 @@
 (define-public (zest-close
   (market <zest-market>) (staking <staking-trait>) (staking-silo <staking-silo-trait>) 
   (repay-token <ft>)
-  (staked-amount uint)
+  (unstake-amount uint)
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
-    (asserts! (> staked-amount u0) ERR_INVALID_AMOUNT)
+    (asserts! (> unstake-amount u0) ERR_INVALID_AMOUNT)
     (let (
-      (repay-amount (try! (zest-close-internal market staking staking-silo repay-token staked-amount price-feed-1 price-feed-2))))
+      (repay-amount (try! (zest-close-internal market staking staking-silo repay-token unstake-amount price-feed-1 price-feed-2))))
 
-      (print { action: "zest-close", user: contract-caller, data: { staked-amount: staked-amount, repay: { token: repay-token, amount: repay-amount } } })
+      (print { action: "zest-close", user: contract-caller, data: { market: market, staking: staking, staking-silo: staking-silo, unstake-amount: unstake-amount, repay: { token: repay-token, amount: repay-amount } } })
       (ok true)
     )
   )
@@ -114,7 +114,7 @@
     ;; Step 2: Borrow asset and stake it in Hermetica
     (try! (zest-open-internal market staking borrow-token borrow-amount price-feed-1 price-feed-2))
 
-    (print { action: "zest-add-open", user: contract-caller, data: { collateral: { token: collateral-token, amount: collateral-amount }, borrow: { token: borrow-token, amount: borrow-amount } } })
+    (print { action: "zest-add-open", user: contract-caller, data: { market: market, staking: staking, collateral: { token: collateral-token, amount: collateral-amount }, borrow: { token: borrow-token, amount: borrow-amount } } })
     (ok true)
   )
 )
@@ -127,17 +127,17 @@
 (define-public (zest-close-remove
   (market <zest-market>) (staking <staking-trait>) (staking-silo <staking-silo-trait>) (hbtc-vault <hbtc-vault-trait>)
   (collateral-token <ft>) (repay-token <ft>)
-  (staked-amount uint) (collateral-amount uint)
+  (unstake-amount uint) (collateral-amount uint)
   (claim-ids (list 1000 uint))
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
-    (asserts! (> staked-amount u0) ERR_INVALID_AMOUNT)
+    (asserts! (> unstake-amount u0) ERR_INVALID_AMOUNT)
     (asserts! (> collateral-amount u0) ERR_INVALID_AMOUNT)
 
     ;; Step 1: Unstake and repay loan
     (let (
-      (repay-amount (try! (zest-close-internal market staking staking-silo repay-token staked-amount price-feed-1 price-feed-2))))
+      (repay-amount (try! (zest-close-internal market staking staking-silo repay-token unstake-amount price-feed-1 price-feed-2))))
 
       ;; Step 2: Remove collateral
       (try! (contract-call? .zest-interface zest-collateral-remove market collateral-token collateral-amount none none))
@@ -150,7 +150,7 @@
         )
         true)
   
-      (print { action: "zest-close-remove", user: contract-caller, data: { collateral: { token: collateral-token, amount: collateral-amount }, staked-amount: staked-amount, repay: { token: repay-token, amount: repay-amount }, claim-ids: claim-ids } })
+      (print { action: "zest-close-remove", user: contract-caller, data: { market: market, staking: staking, staking-silo: staking-silo, hbtc-vault: hbtc-vault, collateral: { token: collateral-token, amount: collateral-amount }, unstake-amount: unstake-amount, repay: { token: repay-token, amount: repay-amount }, claim-ids: claim-ids } })
       (ok true)
     )
   )
@@ -184,7 +184,7 @@
       ;; Step 2: Borrow asset and stake it in Hermetica
       (try! (zest-open-internal market staking borrow-token borrow-amount price-feed-1 price-feed-2))
 
-      (print { action: "zest-deposit-add-open", user: contract-caller, data: { collateral: { token: collateral-token, amount: collateral-amount }, borrow: { token: borrow-token, amount: borrow-amount } } })
+      (print { action: "zest-deposit-add-open", user: contract-caller, data: { market: market, vault: vault, staking: staking, collateral: { token: collateral-token, amount: collateral-amount }, borrow: { token: borrow-token, amount: borrow-amount } } })
       (ok true)
     )
   )
@@ -198,17 +198,17 @@
 (define-public (zest-close-remove-redeem
   (market <zest-market>) (vault <zest-vault>) (staking <staking-trait>) (staking-silo <staking-silo-trait>) (hbtc-vault <hbtc-vault-trait>)
   (repay-token <ft>)
-  (staked-amount uint) (collateral-amount uint) (min-collateral-amount uint)
+  (unstake-amount uint) (collateral-amount uint) (min-collateral-amount uint)
   (claim-ids (list 1000 uint))
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
-    (asserts! (> staked-amount u0) ERR_INVALID_AMOUNT)
+    (asserts! (> unstake-amount u0) ERR_INVALID_AMOUNT)
     (asserts! (> collateral-amount u0) ERR_INVALID_AMOUNT)
 
     ;; Step 1: Unstake and repay loan
     (let (
-      (repay-amount (try! (zest-close-internal market staking staking-silo repay-token staked-amount price-feed-1 price-feed-2))))
+      (repay-amount (try! (zest-close-internal market staking staking-silo repay-token unstake-amount price-feed-1 price-feed-2))))
 
       ;; Step 2: Remove z-token collateral
       (try! (contract-call? .zest-interface zest-collateral-remove market vault collateral-amount none none))
@@ -224,7 +224,7 @@
         )
         true)
 
-      (print { action: "zest-close-remove-redeem", user: contract-caller, data: { collateral: { amount: collateral-amount, min-amount: min-collateral-amount }, staked-amount: staked-amount, repay: { token: repay-token, amount: repay-amount }, claim-ids: claim-ids } })
+      (print { action: "zest-close-remove-redeem", user: contract-caller, data: { market: market, vault: vault, staking: staking, staking-silo: staking-silo, hbtc-vault: hbtc-vault, collateral: { amount: collateral-amount, min-amount: min-collateral-amount }, unstake-amount: unstake-amount, repay: { token: repay-token, amount: repay-amount }, claim-ids: claim-ids } })
       (ok true)
     )
   )
