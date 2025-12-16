@@ -17,11 +17,11 @@
     (get-claim (uint) (response {
       user: principal,
       shares: uint,
-      assets: uint,
-      fee: uint,
+      share-price: (optional uint),
+      assets: (optional uint),
+      fee: (optional uint),
       fee-bps: uint,
-      ts: uint,
-      is-funded: bool
+      ts: uint
     } uint))
   )
 )
