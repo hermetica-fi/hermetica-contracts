@@ -19,17 +19,21 @@
   (market <zest-market>)
   (asset <ft>)
   (amount uint)
-  (price-feeds (optional (list 3 (buff 8192)))))
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of market) none (some (contract-of asset)) none))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
 
+    ;; Update Pyth price feed for sBTC before operation
+    (try! (write-feed price-feed-1))
+    (try! (write-feed price-feed-2))
+
     ;; Transfer tokens from reserve to this interface
     (try! (contract-call? .reserve transfer asset amount current-contract))
     
-    ;; Add collateral to Zest market and capture new total amount
-    (let ((total (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-add asset amount price-feeds))))))
+    ;; Add collateral to Zest market (position owned by this interface contract)
+    (let ((total (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-add asset amount none))))))
       (print { action: "zest-collateral-add", user: contract-caller, data: { market: market, asset: asset, amount: amount, total: total } })
       (ok total)
     )
