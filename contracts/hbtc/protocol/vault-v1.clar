@@ -36,11 +36,11 @@
   {
     user: principal,
     shares: uint,                                 ;; number of hBTC shares to burn at funding time
-    assets: uint,                                 ;; gross asset amount (includes fee) - calculated at funding time
-    fee: uint,                                    ;; fee amount in asset
+    share-price: (optional uint),                 ;; share price at funding time (none until funded)
+    assets: (optional uint),                      ;; gross asset amount (includes fee) - calculated at funding time
+    fee: (optional uint),                         ;; fee amount in asset
     fee-bps: uint,                                ;; fee basis points
     ts: uint,                                     ;; timestamp in s claim after cooldown
-    is-funded: bool,                              ;; true if the claim has been funded
   }
 )
 
@@ -105,11 +105,11 @@
       {
         user: contract-caller,
         shares: shares,
-        assets: u0,  ;; Will be calculated at funding time
-        fee: u0,     ;; Will be calculated at funding time
+        share-price: none,  ;; Will be set at funding time
+        assets: none,       ;; Will be calculated at funding time
+        fee: none,          ;; Will be calculated at funding time
         fee-bps: exit-fee,
         ts: ts,
-        is-funded: false
       }
     )
     (print { action: "create-claim", user: contract-caller, data: { claim-id: new-claim-id, shares: shares, cooldown: cooldown, fee-bps: exit-fee, ts: ts } })
@@ -141,7 +141,7 @@
   )
 )
 
-;; @desc - transfers asset to user after cooldown window has passed
+;; @desc - transfers asset to user after cooldown window has passed (claim must be funded)
 (define-public (redeem (claim-id uint))
   (begin
     (try! (contract-call? .state check-is-redeem-active))
@@ -153,13 +153,12 @@
 (define-private (redeem-internal (claim-id uint))
   (let (
     (current-claim (try! (get-claim claim-id)))
-    (assets (get assets current-claim))
-    (fee (get fee current-claim))
+    (assets (unwrap! (get assets current-claim) ERR_NOT_FUNDED))
+    (fee (unwrap-panic (get fee current-claim)))
     (user (get user current-claim))
     (assets-net (- assets fee))
   )
     (asserts! (>= (get-current-ts) (get ts current-claim)) ERR_NOT_COOLED_DOWN)
-    (asserts! (get is-funded current-claim) ERR_NOT_FUNDED)
     (try! (contract-call? .blacklist check-is-not-soft user))
     (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer assets-net this-contract user none)))
     (if (> fee u0)
@@ -172,7 +171,7 @@
   )
 )
 
-;; @desc - Cancel a redeem request at any time
+;; @desc - Cancel a redeem request at any time (only if not yet funded)
 (define-public (cancel-redeem (claim-id uint))
   (let (
     (claim (try! (get-claim claim-id)))
@@ -180,7 +179,7 @@
     (shares (get shares claim))
   )
     (asserts! (is-eq contract-caller claim-user) ERR_NOT_AUTHORIZED)
-    (asserts! (not (get is-funded claim)) ERR_ALREADY_FUNDED)
+    (asserts! (is-none (get assets claim)) ERR_ALREADY_FUNDED)
     (try! (contract-call? .blacklist check-is-not-soft claim-user))
     
     (try! (contract-call? .hbtc-token transfer shares this-contract claim-user none))
@@ -265,10 +264,10 @@
   )
 )
 
-;; @desc - Processes a single claim for funding (validates, calculates assets/fee, updates claim map)
+;; @desc - Processes a single claim for funding (validates, calculates assets/fee/share-price, updates claim map)
 (define-private (process-claim 
   (claim-id uint)
-  (claim { shares: uint, assets: uint, fee: uint, fee-bps: uint, ts: uint, is-funded: bool, user: principal }) 
+  (claim { user: principal, shares: uint, share-price: (optional uint), assets: (optional uint), fee: (optional uint), fee-bps: uint, ts: uint }) 
   (share-price uint)
   (maybe-manager (optional bool)))
   (let (
@@ -278,14 +277,14 @@
     (fee (/ (* assets (get fee-bps claim)) bps-base))
   )
     (asserts! (> assets u0) ERR_BELOW_MIN)
-    (asserts! (not (get is-funded claim)) ERR_ALREADY_FUNDED)
+    (asserts! (is-none (get assets claim)) ERR_ALREADY_FUNDED)
     (match maybe-manager
       is-manager (asserts! (or is-manager is-cooled-down) ERR_NOT_COOLED_DOWN)
       true
     )
 
-    ;; Update claim with calculated assets and fee, mark as funded
-    (map-set claims { claim-id: claim-id } (merge claim { assets: assets, fee: fee, is-funded: true }))
+    ;; Update claim with calculated assets, fee, and share-price (funding complete when all are some)
+    (map-set claims { claim-id: claim-id } (merge claim { share-price: (some share-price), assets: (some assets), fee: (some fee) }))
     (print { action: "process-claim", user: contract-caller, data: { claim-id: claim-id, shares: shares, assets: assets, fee: fee, share-price: share-price, manager: maybe-manager } })
     (ok { shares: shares, assets: assets })
   )
