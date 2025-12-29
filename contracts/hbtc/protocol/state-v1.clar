@@ -68,7 +68,7 @@
 (define-data-var min-redeem uint u100)                            ;; [8 decimals] - minimum redeem amount
 (define-data-var cooldown uint u259200)                           ;; [259200 seconds] => 3 days - default redeem cooldown period
 (define-data-var express-cooldown uint u3600)                     ;; [3600 seconds] => 1 hour - express redeem cooldown period
-(define-data-var update-window uint u82800)                       ;; [82800 seconds] => 23 hours - min time between reward updates
+(define-data-var update-window uint u86340)                       ;; [86340 seconds] => 23 hours and 59 minutes - min time between reward updates
 (define-data-var staleness-window uint u50)                       ;; [50 seconds] => ~50 seconds - price staleness check
 
 ;; Operational States
