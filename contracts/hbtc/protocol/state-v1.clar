@@ -28,20 +28,12 @@
 (define-constant ERR_FEE_WINDOW (err u102018))
 
 (define-constant max {
-  reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
-  deviation: u20,                                                 ;; [20 bps] => 0.20% - max share price deviation per update
-  slippage: u500,                                                 ;; [500 bps] => 5.00% - max slippage for asset trades
   mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
   perf-fee: u2000,                                                ;; [2000 bps] => 20.00% - max performance fee on profits
   exit-fee: u100,                                                 ;; [100 bps] => 1.00% - max exit fee on redeems
   reserve-rate: u5000,                                            ;; [5000 bps] => 50.00% - max reserve fund allocation rate
   express-fee: u200,                                              ;; [200 bps] => 2.00% - max express redeem fee
   cooldown: u2592000,                                             ;; [2592000 seconds] => 30 days - redeem cooldown period
-  staleness-window: u300,                                         ;; [300 seconds] => 5 min - price staleness check
-})
-
-(define-constant min {
-  update-window: u3600,                                           ;; [3600 seconds] => 1 hour - min time between reward updates
 })
 
 (define-constant bps-base u10000)                                 ;; 10^4 = 10000 (basis points base)
@@ -706,7 +698,7 @@
 (define-public (set-max-reward (new-max-reward uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= new-max-reward (get reward max) ) ERR_ABOVE_MAX)
+    (asserts! (<= new-max-reward bps-base) ERR_ABOVE_MAX)
     (print { action: "set-max-reward", user: contract-caller, data: { old: (get-max-reward), new: new-max-reward } })
     (ok (var-set max-reward new-max-reward))
   )
@@ -715,7 +707,7 @@
 (define-public (set-max-deviation (new-max-deviation uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= new-max-deviation (get deviation max)) ERR_ABOVE_MAX)
+    (asserts! (<= new-max-deviation bps-base) ERR_ABOVE_MAX)
     (print { action: "set-max-deviation", user: contract-caller, data: { old: (get-max-deviation), new: new-max-deviation } })
     (ok (var-set max-deviation new-max-deviation))
   )
@@ -724,7 +716,7 @@
 (define-public (set-update-window (new-update-window uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (>= new-update-window (get update-window min) ) ERR_BELOW_MIN)
+    (asserts! (>= new-update-window u1) ERR_BELOW_MIN)
     (print { action: "set-update-window", user: contract-caller, data: { old: (get-update-window), new: new-update-window } })
     (ok (var-set update-window new-update-window))
   )
@@ -742,7 +734,6 @@
 (define-public (set-staleness-window (new-staleness-window uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= new-staleness-window (get staleness-window max) ) ERR_ABOVE_MAX)
     (print { action: "set-staleness-window", user: contract-caller, data: { old: (get-staleness-window), new: new-staleness-window } })
     (ok (var-set staleness-window new-staleness-window))
   )
@@ -845,7 +836,7 @@
     (new-entry { active: false, ts: (some activation-ts), price-feed-id: price-feed-id, token-base: token-base, max-slippage: max-slippage, is-stablecoin: is-stablecoin })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= max-slippage (get slippage max) ) ERR_ABOVE_MAX)
+    (asserts! (<= max-slippage bps-base) ERR_ABOVE_MAX)
     (print { action: "request-new-asset", user: contract-caller, data: { token-address: token-address, old: (get-asset token-address), new: new-entry } })
     (ok (asserts! (map-insert assets { address: token-address } new-entry) ERR_DUPLICATE))
   )
@@ -879,7 +870,7 @@
     (updated-entry (merge entry { max-slippage: max-slippage }))
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= max-slippage (get slippage max) ) ERR_ABOVE_MAX)
+    (asserts! (<= max-slippage bps-base) ERR_ABOVE_MAX)
     (print { action: "set-max-slippage", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
     (ok (map-set assets { address: address } updated-entry))
   )
