@@ -196,7 +196,7 @@
 ;; @desc - Funds a single claim
 (define-public (fund-claim (claim-id uint))
   (let (
-    (is-manager (get manager (contract-call? .hq-hbtc get-keeper contract-caller)))
+    (is-manager (contract-call? .hq-hbtc get-manager contract-caller))
     (share-price (contract-call? .state get-share-price))
     (claim (try! (get-claim claim-id)))
     (result (try! (process-claim claim-id claim share-price (some is-manager))))

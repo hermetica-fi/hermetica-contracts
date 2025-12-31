@@ -26,11 +26,11 @@
 (define-constant ERR_ZERO_SUPPLY (err u102016))
 (define-constant ERR_EXPRESS_DISABLED (err u102017))
 (define-constant ERR_FEE_WINDOW (err u102018))
+(define-constant ERR_INVALID_TYPE (err u102019))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
   deviation: u20,                                                 ;; [20 bps] => 0.20% - max share price deviation per update
-  slippage: u500,                                                 ;; [500 bps] => 5.00% - max slippage for asset trades
   mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
   perf-fee: u2000,                                                ;; [2000 bps] => 20.00% - max performance fee on profits
   exit-fee: u100,                                                 ;; [100 bps] => 1.00% - max exit fee on redeems
@@ -48,6 +48,18 @@
 (define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
 (define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 
+;; Timelocked update type IDs for uint vars (0x01-0x7F)
+(define-constant MAX_REWARD 0x01)
+(define-constant MAX_DEVIATION 0x02)
+(define-constant MAX_SLIPPAGE 0x03)
+(define-constant MIN_REDEEM 0x04)
+(define-constant COOLDOWN 0x05)
+(define-constant UPDATE_WINDOW 0x06)
+
+;; Timelocked update type IDs for maps (0x80-0xFF)
+(define-constant ASSET 0x80)
+(define-constant EXTERNAL 0x81)
+
 ;;-------------------------------------
 ;; Variables
 ;;-------------------------------------
@@ -62,6 +74,7 @@
 ;; Operational Limits
 (define-data-var max-reward uint u3)                              ;; [3 bps] => 0.03% - max asset reward/loss per log-reward call
 (define-data-var max-deviation uint u5)                           ;; [5 bps] => 0.05% - max share price deviation per update
+(define-data-var max-slippage uint u500)                          ;; [500 bps] => 5.00% - max slippage for asset trades
 (define-data-var reserve-rate uint u500)                          ;; [500 bps] => 5.00% - reserve fund allocation rate from profits (log-reward)
 (define-data-var deposit-cap uint u0)                             ;; [8 decimals] - maximum total vault capacity
 (define-data-var min-deposit uint u100)                           ;; [8 decimals] - minimum deposit amount
@@ -97,7 +110,6 @@
   }
   {
     active: bool,                                                 ;; asset enabled/disabled for trading
-    ts: (optional uint),                                          ;; [unix timestamp] - activation/deactivation timestamp
     price-feed-id: (buff 32),                                     ;; [32 bytes] - Pyth price feed identifier
     token-base: uint,                                             ;; [10^decimals] - token decimal base (e.g., 10^6, 10^8)
     max-slippage: uint,                                           ;; [bps] - max swap slippage allowed for this asset
@@ -112,7 +124,6 @@
   }
   {
     active: bool,                                                 ;; connection enabled/disabled
-    ts: (optional uint)                                           ;; [unix timestamp] - activation timestamp
   }
 )
 
@@ -131,6 +142,24 @@
   }
   {
     exit-fee: uint                                                ;; [bps] - custom exit fee for this user
+  }
+)
+
+(define-map update-requests 
+  {
+    type: (buff 1),
+    address: (optional principal)  ;; none for vars, some(principal) for maps
+  }
+  {
+    ts: uint,
+    value: (optional uint),          ;; some(uint) for vars, none for maps
+    is-add: bool,                    ;; true for add operations, false for remove (only used for ASSET/EXTERNAL types)
+    asset-config: (optional {
+      price-feed-id: (buff 32),
+      token-base: uint,
+      max-slippage: uint,
+      is-stablecoin: bool
+    })                              ;; some(config) for ASSET add operations, none otherwise
   }
 )
 
@@ -220,6 +249,10 @@
   (var-get max-deviation)
 )
 
+(define-read-only (get-max-slippage)
+  (var-get max-slippage)
+)
+
 (define-read-only (get-update-window)
   (var-get update-window)
 )
@@ -277,16 +310,24 @@
 )
 
 (define-read-only (get-asset (address principal))
-  (default-to 
-    { active: false, ts: none, price-feed-id: 0x, token-base: u0, max-slippage: u0, is-stablecoin: false } 
-    (map-get? assets { address: address })
+  (let (
+    (asset-entry (default-to 
+      { active: false, price-feed-id: 0x, token-base: u0, max-slippage: u0, is-stablecoin: false } 
+      (map-get? assets { address: address })))
+    (global-max (get-max-slippage))
+    (asset-max (get max-slippage asset-entry))
+    (effective-max (if (<= asset-max global-max) asset-max global-max))
+  )
+    (merge asset-entry { max-slippage: effective-max })
   )
 )
 
 (define-read-only (get-external (address principal))
-  (default-to 
-    { active: false, ts: none } 
-    (map-get? externals { address: address })
+  (get active
+    (default-to 
+      { active: false } 
+      (map-get? externals { address: address })
+    )
   )
 )
 
@@ -308,6 +349,17 @@
         { exit-fee: (get exit-fee (get-fees)) }
         (map-get? custom-exit-fee { address: address })))
   )
+)
+
+(define-read-only (get-update-request (type (buff 1)) (address (optional principal)))
+  (match (map-get? update-requests { type: type, address: address })
+    entry (ok entry)
+    ERR_NO_ENTRY
+  )
+)
+
+(define-read-only (get-update-request-var (type (buff 1)))
+  (get-update-request type none)
 )
 
 ;;-------------------------------------
@@ -354,27 +406,12 @@
   )
 )
 
-(define-read-only (check-redeem-auth (is-express bool))
-  (begin
-    (try! (check-is-redeem-active))
-    (if is-express (check-is-express-active) (ok true))
-  )
-)
-
 (define-read-only (check-is-express-active)
   (ok (asserts! (get-express-active) ERR_EXPRESS_DISABLED))
 )
 
 (define-read-only (check-is-transfer-active)
   (ok (asserts! (get-transfer-active) ERR_TRANSFER_DISABLED))
-)
-
-(define-read-only (check-transfer-auth (asset principal))
-  (begin
-    (try! (check-is-vault-active))
-    (try! (check-is-transfer-active))
-    (check-is-asset asset)
-  )
 )
 
 (define-read-only (check-is-trading-active)
@@ -389,7 +426,7 @@
 )
 
 (define-read-only (check-is-external (address principal))
-  (ok (asserts! (get active (get-external address)) ERR_NOT_EXTERNAL))
+  (ok (asserts! (get-external address) ERR_NOT_EXTERNAL))
 )
 
 (define-read-only (check-update-window)
@@ -398,16 +435,6 @@
 
 (define-read-only (check-max-reward (amount uint))
     (ok (asserts! (<= amount (/ (* (get-max-reward) (get-total-assets)) bps-base)) ERR_ABOVE_MAX))
-)
-
-(define-read-only (check-trading-auth (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
-  (begin
-    (try! (check-is-trading-active))
-    (try! (check-is-external address-1))
-    (match address-2 value (try! (check-is-external value)) true)
-    (match asset-1 value (try! (check-is-asset value)) true)
-    (ok (match asset-2 value (try! (check-is-asset value)) true))
-  )
 )
 
 ;; Share Price Protection
@@ -422,6 +449,31 @@
                   u0))  ;; Handle edge case of last redeem
   )
     (ok (asserts! (<= deviation threshold) ERR_DEVIATION))
+  )
+)
+
+(define-read-only (check-redeem-auth (is-express bool))
+  (begin
+    (try! (check-is-redeem-active))
+    (if is-express (check-is-express-active) (ok true))
+  )
+)
+
+(define-read-only (check-transfer-auth (asset principal))
+  (begin
+    (try! (check-is-vault-active))
+    (try! (check-is-transfer-active))
+    (check-is-asset asset)
+  )
+)
+
+(define-read-only (check-trading-auth (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
+  (begin
+    (try! (check-is-trading-active))
+    (try! (check-is-external address-1))
+    (match address-2 value (try! (check-is-external value)) true)
+    (match asset-1 value (try! (check-is-asset value)) true)
+    (ok (match asset-2 value (try! (check-is-asset value)) true))
   )
 )
 
@@ -560,6 +612,265 @@
     (ok new-id)
   )
 )
+
+;;-------------------------------------
+;; Timelocked Update Helpers
+;;-------------------------------------
+
+(define-private (request-update (type (buff 1)) (address (optional principal)) (value (optional uint)) (is-add bool) (asset-config (optional {
+  price-feed-id: (buff 32),
+  token-base: uint,
+  max-slippage: uint,
+  is-stablecoin: bool
+})))
+  (let (
+    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-timelock)))
+    (new-entry { ts: activation-ts, value: value, is-add: is-add, asset-config: asset-config })
+  )
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (print { action: "request-update", user: contract-caller, data: { type: type, address: address, entry: new-entry } })
+    (ok (asserts! (map-insert update-requests { type: type, address: address } new-entry) ERR_DUPLICATE))
+  )
+)
+
+(define-private (request-var-update (type (buff 1)) (value uint))
+  (request-update type none (some value) false none)
+)
+
+(define-private (request-map-update (type (buff 1)) (address principal) (is-add bool) (asset-config (optional {
+  price-feed-id: (buff 32),
+  token-base: uint,
+  max-slippage: uint,
+  is-stablecoin: bool
+})))
+  (request-update type (some address) none is-add asset-config)
+)
+
+(define-private (cancel-update (type (buff 1)) (address (optional principal)))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (asserts! (is-some (map-get? update-requests { type: type, address: address })) ERR_NO_ENTRY)
+    (print { action: "cancel-update", user: contract-caller, data: { type: type, address: address } })
+    (ok (map-delete update-requests { type: type, address: address }))
+  )
+)
+
+(define-private (cancel-var-update (type (buff 1)))
+  (cancel-update type none)
+)
+
+(define-private (cancel-map-update (type (buff 1)) (address principal))
+  (cancel-update type (some address))
+)
+
+(define-private (execute-var-update (type (buff 1)) (val uint))
+  (if (is-eq type MAX_REWARD) (var-set max-reward val)
+  (if (is-eq type MAX_DEVIATION) (var-set max-deviation val)
+  (if (is-eq type MAX_SLIPPAGE) (var-set max-slippage val)
+  (if (is-eq type MIN_REDEEM) (var-set min-redeem val)
+  (if (is-eq type COOLDOWN) (var-set cooldown val)
+  (if (is-eq type UPDATE_WINDOW) (var-set update-window val)
+  false)))))) ;; if no match, return false
+)
+
+(define-private (execute-map-update 
+  (type (buff 1)) 
+  (addr principal) 
+  (is-add bool)
+  (asset-config (optional { price-feed-id: (buff 32), token-base: uint, max-slippage: uint, is-stablecoin: bool})))
+  (if (and (is-eq type ASSET) is-add)
+    (match asset-config
+      data (map-set assets { address: addr } { active: true, price-feed-id: (get price-feed-id data), token-base: (get token-base data), max-slippage: (get max-slippage data), is-stablecoin: (get is-stablecoin data) })
+      false)
+  (if (and (is-eq type ASSET) (not is-add))
+    (map-delete assets { address: addr })
+  (if (and (is-eq type EXTERNAL) is-add)
+    (map-set externals { address: addr } { active: true })
+  (if (and (is-eq type EXTERNAL) (not is-add))
+    (map-delete externals { address: addr })
+  false)))) ;; if no match, return false
+) 
+
+(define-private (confirm-update (type (buff 1)) (address (optional principal)))
+  (let (
+    (entry (try! (get-update-request type address)))
+    (value (get value entry))
+    (is-add (get is-add entry))
+    (asset-config (get asset-config entry))
+    (is-var-update (and (is-some value) (is-none address)))
+    (is-map-update (and (is-none value) (is-some address)))
+  )
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (try! (contract-call? .hq-hbtc check-timelock (get ts entry)))
+    (asserts! (or is-var-update is-map-update) ERR_INVALID)
+    (if is-var-update
+      (asserts! (execute-var-update type (unwrap-panic value)) ERR_INVALID_TYPE)
+      (asserts! (execute-map-update type (unwrap-panic address) is-add asset-config) ERR_INVALID_TYPE))
+    (print { action: "confirm-update", user: contract-caller, data: { type: type, address: address, value: value, is-add: is-add, asset-config: asset-config } })
+    (ok (map-delete update-requests { type: type, address: address }))
+  )
+)
+
+(define-private (confirm-var-update (type (buff 1)))
+  (confirm-update type none)
+)
+
+(define-private (confirm-map-update (type (buff 1)) (address principal))
+  (confirm-update type (some address))
+)
+
+;; Variable update request functions
+(define-public (request-max-reward-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get reward max)) ERR_ABOVE_MAX)
+    (request-var-update MAX_REWARD new-value)
+  )
+)
+
+(define-public (request-max-deviation-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get deviation max)) ERR_ABOVE_MAX)
+    (request-var-update MAX_DEVIATION new-value)
+  )
+)
+
+(define-public (request-min-redeem-update (new-value uint))
+  (begin
+    (asserts! (> new-value u0) ERR_BELOW_MIN)
+    (request-var-update MIN_REDEEM new-value)
+  )
+)
+
+(define-public (request-cooldown-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
+    (asserts! (>= new-value (get-express-cooldown)) ERR_BELOW_MIN)
+    (request-var-update COOLDOWN new-value)
+  )
+)
+
+(define-public (request-update-window-update (new-value uint))
+  (begin
+    (asserts! (>= new-value (get update-window min)) ERR_BELOW_MIN)
+    (request-var-update UPDATE_WINDOW new-value)
+  )
+)
+
+(define-public (request-max-slippage-update (new-value uint))
+  (begin
+    (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)
+    (request-var-update MAX_SLIPPAGE new-value)
+  )
+)
+
+;; Variable cancel functions
+(define-public (cancel-max-reward-request)
+  (cancel-var-update MAX_REWARD)
+)
+
+(define-public (cancel-max-deviation-request)
+  (cancel-var-update MAX_DEVIATION)
+)
+
+(define-public (cancel-min-redeem-request)
+  (cancel-var-update MIN_REDEEM)
+)
+
+(define-public (cancel-cooldown-request)
+  (cancel-var-update COOLDOWN)
+)
+
+(define-public (cancel-update-window-request)
+  (cancel-var-update UPDATE_WINDOW)
+)
+
+(define-public (cancel-max-slippage-request)
+  (cancel-var-update MAX_SLIPPAGE)
+)
+
+;; Variable confirm functions
+(define-public (confirm-max-reward-request)
+  (confirm-var-update MAX_REWARD)
+)
+
+(define-public (confirm-max-deviation-request)
+  (confirm-var-update MAX_DEVIATION)
+)
+
+(define-public (confirm-min-redeem-request)
+  (confirm-var-update MIN_REDEEM)
+)
+
+(define-public (confirm-cooldown-request)
+  (confirm-var-update COOLDOWN)
+)
+
+(define-public (confirm-update-window-request)
+  (confirm-var-update UPDATE_WINDOW)
+)
+
+(define-public (confirm-max-slippage-request)
+  (confirm-var-update MAX_SLIPPAGE)
+)
+
+;;-------------------------------------
+;; Asset Request Functions
+;;-------------------------------------
+
+(define-public (request-asset-add (address principal) (data {
+  price-feed-id: (buff 32),
+  token-base: uint,
+  max-slippage: uint,
+  is-stablecoin: bool
+}))
+  (begin
+    (asserts! (is-none (map-get? assets { address: address })) ERR_DUPLICATE)
+    (asserts! (<= (get max-slippage data) (get-max-slippage)) ERR_ABOVE_MAX)
+    (request-map-update ASSET address true (some data))
+  )
+)
+
+(define-public (request-asset-remove (address principal))
+  (begin
+    (asserts! (is-some (map-get? assets { address: address })) ERR_NO_ENTRY)
+    (request-map-update ASSET address false none)
+  )
+)
+
+(define-public (cancel-asset-request (address principal))
+  (cancel-map-update ASSET address)
+)
+
+(define-public (confirm-asset-request (address principal))
+  (confirm-map-update ASSET address)
+)
+
+;;-------------------------------------
+;; External Request Functions
+;;-------------------------------------
+
+(define-public (request-external-add (address principal))
+  (begin
+    (asserts! (not (get-external address)) ERR_DUPLICATE)
+    (request-map-update EXTERNAL address true none)
+  )
+)
+
+(define-public (request-external-remove (address principal))
+  (begin
+    (asserts! (is-some (map-get? externals { address: address })) ERR_NO_ENTRY)
+    (request-map-update EXTERNAL address false none)
+  )
+)
+
+(define-public (cancel-external-request (address principal))
+  (cancel-map-update EXTERNAL address)
+)
+
+(define-public (confirm-external-request (address principal))
+  (confirm-map-update EXTERNAL address)
+)
+
 ;;-------------------------------------
 ;; Setters
 ;;-------------------------------------
@@ -626,16 +937,6 @@
   )
 )
 
-(define-public (set-cooldown (new-cooldown uint))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (asserts! (<= new-cooldown (get cooldown max) ) ERR_ABOVE_MAX)
-    (asserts! (>= new-cooldown (get-express-cooldown)) ERR_INVALID)
-    (print { action: "set-cooldown", user: contract-caller, data: { old: (get-cooldown), new: new-cooldown } })
-    (ok (var-set cooldown new-cooldown))
-  )
-)
-
 (define-public (set-express-cooldown (new-cooldown uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
@@ -691,42 +992,6 @@
     (asserts! (> new-min-deposit u0) ERR_BELOW_MIN)
     (print { action: "set-min-deposit", user: contract-caller, data: { old: (get-min-deposit), new: new-min-deposit } })
     (ok (var-set min-deposit new-min-deposit))
-  )
-)
-
-(define-public (set-min-redeem (new-min-redeem uint))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (asserts! (> new-min-redeem u0) ERR_BELOW_MIN)
-    (print { action: "set-min-redeem", user: contract-caller, data: { old: (get-min-redeem), new: new-min-redeem } })
-    (ok (var-set min-redeem new-min-redeem))
-  )
-)
-
-(define-public (set-max-reward (new-max-reward uint))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= new-max-reward (get reward max) ) ERR_ABOVE_MAX)
-    (print { action: "set-max-reward", user: contract-caller, data: { old: (get-max-reward), new: new-max-reward } })
-    (ok (var-set max-reward new-max-reward))
-  )
-)
-
-(define-public (set-max-deviation (new-max-deviation uint))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= new-max-deviation (get deviation max)) ERR_ABOVE_MAX)
-    (print { action: "set-max-deviation", user: contract-caller, data: { old: (get-max-deviation), new: new-max-deviation } })
-    (ok (var-set max-deviation new-max-deviation))
-  )
-)
-
-(define-public (set-update-window (new-update-window uint))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (>= new-update-window (get update-window min) ) ERR_BELOW_MIN)
-    (print { action: "set-update-window", user: contract-caller, data: { old: (get-update-window), new: new-update-window } })
-    (ok (var-set update-window new-update-window))
   )
 )
 
@@ -837,83 +1102,15 @@
   )
 )
 
-(define-public (request-new-asset (token <ft>) (price-feed-id (buff 32)) (max-slippage uint) (is-stablecoin bool))
-  (let (
-    (token-address (contract-of token))
-    (token-base (pow u10 (unwrap-panic (contract-call? token get-decimals))))
-    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-activation-delay)))
-    (new-entry { active: false, ts: (some activation-ts), price-feed-id: price-feed-id, token-base: token-base, max-slippage: max-slippage, is-stablecoin: is-stablecoin })
-  )
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= max-slippage (get slippage max) ) ERR_ABOVE_MAX)
-    (print { action: "request-new-asset", user: contract-caller, data: { token-address: token-address, old: (get-asset token-address), new: new-entry } })
-    (ok (asserts! (map-insert assets { address: token-address } new-entry) ERR_DUPLICATE))
-  )
-)
-
-(define-public (remove-asset (address principal))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (print { action: "remove-asset", user: contract-caller, data: { address: address, old: (get-asset address) } })
-    (ok (map-delete assets { address: address }))
-  )
-)
-
-(define-public (activate-asset (address principal))
+(define-public (set-asset-slippage (address principal) (new-slippage uint))
   (let (
     (entry (get-asset address))
-    (ts (unwrap! (get ts entry) ERR_NO_ENTRY))
-    (updated-entry (merge entry { active: true }))
+    (updated-entry (merge entry { max-slippage: new-slippage }))
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (try! (contract-call? .hq-hbtc check-activation-delay ts))
-    (print { action: "activate-asset", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
+    (try! (check-is-asset address))
+    (asserts! (<= new-slippage (get-max-slippage)) ERR_ABOVE_MAX)
+    (print { action: "set-asset-slippage", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
     (ok (map-set assets { address: address } updated-entry))
-  )
-)
-
-(define-public (set-max-slippage (address principal) (max-slippage uint))
-  (let (
-    (entry (get-asset address))
-    (ts (unwrap! (get ts entry) ERR_NO_ENTRY))
-    (updated-entry (merge entry { max-slippage: max-slippage }))
-  )
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= max-slippage (get slippage max) ) ERR_ABOVE_MAX)
-    (print { action: "set-max-slippage", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
-    (ok (map-set assets { address: address } updated-entry))
-  )
-)
-
-(define-public (request-new-external (address principal))
-  (let (
-    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-activation-delay)))
-    (new-entry { active: false, ts: (some activation-ts) })
-  )
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (try! (contract-call? .hq-hbtc check-is-standard address))
-    (print { action: "request-new-external", user: contract-caller, data: { address: address, old: (get-external address), new: new-entry } })
-    (ok (asserts! (map-insert externals { address: address } new-entry) ERR_DUPLICATE))
-  )
-)
-
-(define-public (remove-external (address principal))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (print { action: "remove-external", user: contract-caller, data: { address: address, old: (get-external address) } })
-    (ok (map-delete externals { address: address }))
-  )
-)
-
-(define-public (activate-external (address principal))
-  (let (
-    (entry (get-external address))
-    (ts (unwrap! (get ts entry) ERR_NO_ENTRY))
-    (updated-entry (merge entry { active: true }))
-  )
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (try! (contract-call? .hq-hbtc check-activation-delay ts))
-    (print { action: "activate-external", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
-    (ok (map-set externals { address: address } updated-entry))
   )
 )

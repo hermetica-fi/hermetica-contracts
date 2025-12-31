@@ -19,20 +19,46 @@
 (define-constant ERR_PROTOCOL_DISABLED (err u101010))
 (define-constant ERR_NOT_STANDARD (err u101011))
 (define-constant ERR_BELOW_MIN (err u101012))
-(define-constant ERR_ACTIVATION (err u101013))
-(define-constant ERR_NO_ENTRY (err u101014))
-(define-constant ERR_DUPLICATE (err u101015))
+(define-constant ERR_ABOVE_MAX (err u101013))
+(define-constant ERR_TIMELOCK (err u101014))
+(define-constant ERR_NO_ENTRY (err u101015))
+(define-constant ERR_DUPLICATE (err u101016))
+
+
+(define-constant max {
+  timelock: u2592000,                                     ;; 30 days in seconds
+})
 
 (define-constant min {
-  activation-delay: u86400,                                       ;; 1 day in seconds
+  timelock: u86400,                                       ;; 1 day in seconds
 })
+
+;; Role constants as 1-byte buffers
+(define-constant ADMIN 0x01)
+(define-constant GUARDIAN 0x02)
+(define-constant TRADER 0x03)
+(define-constant REWARDER 0x04)
+(define-constant MANAGER 0x05)
+(define-constant FEE_SETTER 0x06)
+(define-constant PROTOCOL 0x07)
 
 ;;-------------------------------------
 ;; Variables
 ;;-------------------------------------
 
-(define-data-var activation-delay uint u86400)
 (define-data-var protocol-active bool true)
+
+(define-data-var timelock uint u86400)
+(define-data-var next-timelock
+  {
+    duration: uint,
+    ts: uint
+  }
+  {
+    duration: (get-timelock),
+    ts: (+ (get-current-ts) (get-timelock))
+  }
+)
 
 (define-data-var owner principal tx-sender)
 (define-data-var next-owner
@@ -42,7 +68,7 @@
   }
   {
     address: tx-sender,
-    ts: (+ (get-current-ts) (get-activation-delay))
+    ts: (+ (get-current-ts) (get-timelock))
   }
 )
 
@@ -50,18 +76,9 @@
 ;; Maps
 ;;-------------------------------------
 
-(define-map admins
+(define-map roles 
   {
-    address: principal
-  }
-  {
-    active: bool,
-    ts: (optional uint)
-  }
-)
-
-(define-map guardians
-  {
+    type: (buff 1),
     address: principal
   }
   {
@@ -69,25 +86,14 @@
   }
 )
 
-(define-map keepers
+(define-map update-requests 
   {
+    type: (buff 1), 
     address: principal
   }
   {
-    trader: bool,
-    rewarder: bool,
-    manager: bool,
-    fee-setter: bool
-  }
-)
-
-(define-map protocol 
-  {
-    address: principal
-  }
-  {
-    active: bool,
-    ts: (optional uint)
+    ts: uint,
+    is-add: bool
   }
 )
 
@@ -103,8 +109,12 @@
 ;; Getters
 ;;-------------------------------------
 
-(define-read-only (get-activation-delay)
-  (var-get activation-delay)
+(define-read-only (get-timelock)
+  (var-get timelock)
+)
+
+(define-read-only (get-next-timelock)
+  (var-get next-timelock)
 )
 
 (define-read-only (get-protocol-active)
@@ -119,33 +129,45 @@
   (var-get next-owner)
 )
 
-(define-read-only (get-admin (address principal))
+(define-read-only (get-role (address principal) (type (buff 1)))
   (default-to 
-    { active: false, ts: none }
-    (map-get? admins { address: address })
+    { active: false }
+    (map-get? roles { type: type, address: address })
   )
+)
+
+(define-read-only (get-admin (address principal))
+  (get active (get-role address ADMIN))
 )
 
 (define-read-only (get-guardian (address principal))
-  (get active
-    (default-to
-      { active: false }
-      (map-get? guardians { address: address })
-    )
-  )
+  (get active (get-role address GUARDIAN))
 )
 
-(define-read-only (get-keeper (address principal))
-  (default-to
-    { trader: false, rewarder: false, manager: false, fee-setter: false }
-    (map-get? keepers { address: address })
-  )
+(define-read-only (get-trader (address principal))
+  (get active (get-role address TRADER))
+)
+
+(define-read-only (get-rewarder (address principal))
+  (get active (get-role address REWARDER))
+)
+
+(define-read-only (get-manager (address principal))
+  (get active (get-role address MANAGER))
+)
+
+(define-read-only (get-fee-setter (address principal))
+  (get active (get-role address FEE_SETTER))
 )
 
 (define-read-only (get-protocol (address principal))
-  (default-to 
-    { active: false, ts: none } 
-    (map-get? protocol { address: address })
+  (get active (get-role address PROTOCOL))
+)
+
+(define-read-only (get-update-request (type (buff 1)) (address principal))
+  (match (map-get? update-requests { type: type, address: address })
+    entry (ok entry)
+    ERR_NO_ENTRY
   )
 )
 
@@ -153,8 +175,8 @@
 ;; Checks
 ;;-------------------------------------
 
-(define-read-only (check-activation-delay (ts uint))
-  (ok (asserts! (>= (get-current-ts) ts) ERR_ACTIVATION))
+(define-read-only (check-timelock (ts uint))
+  (ok (asserts! (>= (get-current-ts) ts) ERR_TIMELOCK))
 )
 
 (define-read-only (check-is-standard (address principal))
@@ -170,7 +192,7 @@
 )
 
 (define-read-only (check-is-admin (address principal))
-  (ok (asserts! (get active (get-admin address)) ERR_NOT_ADMIN))
+  (ok (asserts! (get-admin address) ERR_NOT_ADMIN))
 )
 
 (define-read-only (check-is-guardian (address principal))
@@ -178,23 +200,23 @@
 )
 
 (define-read-only (check-is-trader (address principal))
-  (ok (asserts! (get trader (get-keeper address)) ERR_NOT_TRADER))
+  (ok (asserts! (get-trader address) ERR_NOT_TRADER))
 )
 
 (define-read-only (check-is-rewarder (address principal))
-  (ok (asserts! (get rewarder (get-keeper address)) ERR_NOT_REWARDER))
+  (ok (asserts! (get-rewarder address) ERR_NOT_REWARDER))
 )
 
 (define-read-only (check-is-manager (address principal))
-  (ok (asserts! (get manager (get-keeper address)) ERR_NOT_MANAGER))
+  (ok (asserts! (get-manager address) ERR_NOT_MANAGER))
 )
 
 (define-read-only (check-is-fee-setter (address principal))
-  (ok (asserts! (get fee-setter (get-keeper address)) ERR_NOT_FEE_SETTER))
+  (ok (asserts! (get-fee-setter address) ERR_NOT_FEE_SETTER))
 )
 
 (define-read-only (check-is-protocol (address principal))
-  (ok (asserts! (get active (get-protocol address)) ERR_NOT_PROTOCOL))
+  (ok (asserts! (get-protocol address) ERR_NOT_PROTOCOL))
 )
 
 (define-read-only (check-is-protocol-two (address-1 principal) (address-2 principal))
@@ -207,15 +229,6 @@
 ;;-------------------------------------
 ;; Setters
 ;;-------------------------------------
-
-(define-public (set-activation-delay (delay uint))
-  (begin
-    (try! (check-is-owner contract-caller))
-    (asserts! (>= delay (get activation-delay min)) ERR_BELOW_MIN)
-    (print { action: "set-activation-delay", user: contract-caller, data: { old: (get-activation-delay), new: delay } })
-    (ok (var-set activation-delay delay))
-  )
-)
 
 (define-public (set-protocol-active (active bool))
   (begin
@@ -233,9 +246,49 @@
   )
 )
 
+(define-public (request-new-timelock (duration uint))
+  (let (
+    (activation-ts (+ (get-current-ts) (get-timelock)))
+    (new-entry { duration: duration, ts: activation-ts })
+  )
+    (try! (check-is-owner contract-caller))
+    (asserts! (>= duration (get timelock min)) ERR_BELOW_MIN)
+    (asserts! (<= duration (get timelock max)) ERR_ABOVE_MAX)
+    (print { action: "request-new-timelock", user: contract-caller, data: { old: (get-timelock), new: duration } })
+    (ok (var-set next-timelock new-entry))
+  )
+)
+
+(define-public (cancel-new-timelock)
+  (let (
+    (entry (get-next-timelock))
+    (duration (get duration entry))
+    (current (get-timelock))
+  )
+    (try! (check-is-owner contract-caller))
+    (asserts! (not (is-eq duration current)) ERR_DUPLICATE)
+    (print { action: "cancel-new-timelock", user: contract-caller, data: { old: current, new: duration } })
+    (ok (var-set next-timelock { duration: current, ts: (get-current-ts) }))
+  )
+)
+
+(define-public (confirm-new-timelock)
+  (let (
+    (entry (get-next-timelock))
+    (duration (get duration entry))
+    (current (get-timelock))
+  )
+    (try! (check-is-owner contract-caller))
+    (try! (check-timelock (get ts entry)))
+    (asserts! (not (is-eq current duration)) ERR_DUPLICATE)
+    (print { action: "confirm-new-timelock", user: contract-caller, data: { old: current, new: duration } })
+    (ok (var-set timelock duration))
+  )
+)
+
 (define-public (request-new-owner (address principal))
   (let (
-    (activation-ts (+ (get-current-ts) (get-activation-delay)))
+    (activation-ts (+ (get-current-ts) (get-timelock)))
     (new-entry { address: address, ts: activation-ts })
   )
     (try! (check-is-owner contract-caller))
@@ -246,6 +299,19 @@
   )
 )
 
+(define-public (cancel-new-owner)
+  (let (
+    (entry (get-next-owner))
+    (next (get address entry))
+    (current (get-owner))
+  )
+    (try! (check-is-owner contract-caller))
+    (asserts! (not (is-eq current next)) ERR_DUPLICATE)
+    (print { action: "cancel-new-owner", user: contract-caller, data: { old: current, new: next } })
+    (ok (var-set next-owner { address: current, ts: (get-current-ts) }))
+  )
+)
+
 (define-public (claim-owner)
   (let (
     (entry (get-next-owner))
@@ -253,92 +319,141 @@
     (current (get-owner))
   )
     (asserts! (is-eq next contract-caller) ERR_NOT_NEXT_OWNER)
-    (try! (check-activation-delay (get ts entry)))
+    (try! (check-timelock (get ts entry)))
     (asserts! (not (is-eq current next)) ERR_DUPLICATE)
     (print { action: "claim-owner", user: contract-caller, data: { old: current, new: next } })
     (ok (var-set owner next))
   )
 )
 
-(define-public (request-new-admin (address principal))
+(define-private (request-update (type (buff 1)) (address principal) (is-add bool))
   (let (
-    (activation-ts (+ (get-current-ts) (get-activation-delay)))
-    (new-entry { active: false, ts: (some activation-ts) })
+    (activation-ts (+ (get-current-ts) (get-timelock)))
+    (new-entry { ts: activation-ts, is-add: is-add })
+    (is-active (get active (get-role address type)))
   )
     (try! (check-is-owner contract-caller))
     (try! (check-is-standard address))
-    (print { action: "request-new-admin", user: contract-caller, data: { address: address, old: (get-admin address), new: new-entry } })
-    (ok (asserts! (map-insert admins { address: address } new-entry) ERR_DUPLICATE))
+    (if is-add
+      (asserts! (not is-active) ERR_DUPLICATE)
+      (asserts! is-active ERR_NO_ENTRY))
+    (print { action: "request-update", user: contract-caller, data: { type: type, address: address, entry: new-entry } })
+    (ok (asserts! (map-insert update-requests { type: type, address: address } new-entry) ERR_DUPLICATE))
   )
 )
 
-(define-public (remove-admin (address principal))
+(define-private (cancel-update (type (buff 1)) (address principal))
   (begin
     (try! (check-is-owner contract-caller))
-    (print { action: "remove-admin", user: contract-caller, data: { address: address, old: (get-admin address) } })
-    (ok (map-delete admins { address: address }))
+    (print { action: "cancel-update", user: contract-caller, data: { type: type, address: address } })
+    (ok (map-delete update-requests { type: type, address: address }))
   )
 )
 
-(define-public (claim-admin)
+(define-private (confirm-update (type (buff 1)) (address principal))
   (let (
-    (entry (get-admin contract-caller))
-    (ts (unwrap! (get ts entry) ERR_NO_ENTRY))
-    (updated-entry (merge entry { active: true }))
+    (entry (try! (get-update-request type address)))
+    (is-add (get is-add entry))
   )
-    (try! (check-activation-delay ts))
-    (print { action: "claim-admin", user: contract-caller, data: { address: contract-caller, old: entry, new: updated-entry } })
-    (ok (map-set admins { address: contract-caller } updated-entry))
+    (try! (check-is-owner contract-caller))
+    (try! (check-timelock (get ts entry)))
+    (begin
+      (if is-add
+        (map-set roles { type: type, address: address } { active: true })
+        (map-delete roles { type: type, address: address }))
+      (print { action: "confirm-update", user: contract-caller, data: { type: type, address: address, is-add: is-add } })
+      (ok (map-delete update-requests { type: type, address: address }))
+    )
   )
 )
 
-(define-public (set-guardian (address principal) (active bool))
-  (begin
-    (try! (check-is-owner contract-caller))
-    (try! (check-is-standard address))
-    (print { action: "set-guardian", user: contract-caller, data: { address: address, old: (get-guardian address), new: active } })
-    (ok (map-set guardians { address: address } { active: active }))
-  )
+;;-------------------------------------
+;; Role-Specific Functions
+;;-------------------------------------
+
+;; Request role update functions
+(define-public (request-admin-update (address principal) (is-add bool))
+  (request-update ADMIN address is-add)
 )
 
-(define-public (set-keeper (address principal) (trader bool) (rewarder bool) (manager bool) (fee-setter bool))
-  (begin
-    (try! (check-is-owner contract-caller))
-    (try! (check-is-standard address))
-    (print { action: "set-keeper", user: contract-caller, data: { address: address, old: (get-keeper address), new: { trader: trader, rewarder: rewarder, manager: manager, fee-setter: fee-setter } } })
-    (ok (map-set keepers { address: address } { trader: trader, rewarder: rewarder, manager: manager, fee-setter: fee-setter }))
-  )
+(define-public (request-guardian-update (address principal) (is-add bool))
+  (request-update GUARDIAN address is-add)
 )
 
-(define-public (request-new-protocol (address principal))
-  (let (
-    (activation-ts (+ (get-current-ts) (get-activation-delay)))
-    (new-entry { active: false, ts: (some activation-ts) })
-  )
-    (try! (check-is-owner contract-caller))
-    (try! (check-is-standard address))
-    (print { action: "request-new-protocol", user: contract-caller, data: { address: address, old: (get-protocol address), new: new-entry } })
-    (ok (asserts! (map-insert protocol { address: address } new-entry) ERR_DUPLICATE))
-  )
+(define-public (request-trader-update (address principal) (is-add bool))
+  (request-update TRADER address is-add)
 )
 
-(define-public (remove-protocol (address principal))
-  (begin
-    (try! (check-is-owner contract-caller))
-    (print { action: "remove-protocol", user: contract-caller, data: { address: address, old: (get-protocol address) } })
-    (ok (map-delete protocol { address: address }))
-  )
+(define-public (request-rewarder-update (address principal) (is-add bool))
+  (request-update REWARDER address is-add)
 )
 
-(define-public (activate-protocol (address principal))
-  (let (
-    (entry (get-protocol address))
-    (ts (unwrap! (get ts entry) ERR_NO_ENTRY))
-    (updated-entry (merge entry { active: true }))
-  )
-    (try! (check-is-owner contract-caller))
-    (try! (check-activation-delay ts))
-    (print { action: "activate-protocol", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
-    (ok (map-set protocol { address: address } updated-entry))
-  )
+(define-public (request-manager-update (address principal) (is-add bool))
+  (request-update MANAGER address is-add)
+)
+
+(define-public (request-fee-setter-update (address principal) (is-add bool))
+  (request-update FEE_SETTER address is-add)
+)
+
+(define-public (request-protocol-update (address principal) (is-add bool))
+  (request-update PROTOCOL address is-add)
+)
+
+;; Cancel role request functions
+(define-public (cancel-admin-request (address principal))
+  (cancel-update ADMIN address)
+)
+
+(define-public (cancel-guardian-request (address principal))
+  (cancel-update GUARDIAN address)
+)
+
+(define-public (cancel-trader-request (address principal))
+  (cancel-update TRADER address)
+)
+
+(define-public (cancel-rewarder-request (address principal))
+  (cancel-update REWARDER address)
+)
+
+(define-public (cancel-manager-request (address principal))
+  (cancel-update MANAGER address)
+)
+
+(define-public (cancel-fee-setter-request (address principal))
+  (cancel-update FEE_SETTER address)
+)
+
+(define-public (cancel-protocol-request (address principal))
+  (cancel-update PROTOCOL address)
+)
+
+;; Confirm role request functions
+(define-public (confirm-admin-request (address principal))
+  (confirm-update ADMIN address)
+)
+
+(define-public (confirm-guardian-request (address principal))
+  (confirm-update GUARDIAN address)
+)
+
+(define-public (confirm-trader-request (address principal))
+  (confirm-update TRADER address)
+)
+
+(define-public (confirm-rewarder-request (address principal))
+  (confirm-update REWARDER address)
+)
+
+(define-public (confirm-manager-request (address principal))
+  (confirm-update MANAGER address)
+)
+
+(define-public (confirm-fee-setter-request (address principal))
+  (confirm-update FEE_SETTER address)
+)
+
+(define-public (confirm-protocol-request (address principal))
+  (confirm-update PROTOCOL address)
 )
