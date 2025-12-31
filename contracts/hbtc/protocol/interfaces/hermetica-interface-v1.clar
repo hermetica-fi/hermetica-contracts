@@ -1,6 +1,6 @@
 ;; @contract Hermetica Interface
 ;; @version 1
-;; @desc Interface for Hermetica protocol integration
+;; @description Hermetica interface for USDh
 
 (use-trait ft .sip-010-trait.sip-010-trait)
 (use-trait pyth-storage 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2.storage-trait)

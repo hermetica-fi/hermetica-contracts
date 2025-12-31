@@ -1,5 +1,6 @@
 ;; @contract Controller
 ;; @version 1
+;; @description Reward distribution logic
 
 ;;-------------------------------------
 ;; Constants

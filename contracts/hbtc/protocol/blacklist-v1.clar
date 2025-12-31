@@ -1,5 +1,6 @@
 ;; @contract Blacklist
 ;; @version 1
+;; @description Blacklist contract for the protocol
 
 ;;-------------------------------------
 ;; Constants

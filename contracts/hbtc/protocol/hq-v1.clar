@@ -1,7 +1,6 @@
 ;; @contract HQ
 ;; @version 1
-;; @desc Centralized governance contract for HBTC protocol
-
+;; @description Centralized governance contract
 
 ;;-------------------------------------
 ;; Constants
@@ -26,14 +25,14 @@
 
 
 (define-constant max {
-  timelock: u2592000,                                     ;; 30 days in seconds
+  timelock: u2592000,                                          ;; 30 days in seconds
 })
 
 (define-constant min {
-  timelock: u86400,                                       ;; 1 day in seconds
+  timelock: u86400,                                            ;; 1 day in seconds
 })
 
-;; Role constants as 1-byte buffers
+;; Timelocked roles
 (define-constant ADMIN 0x01)
 (define-constant GUARDIAN 0x02)
 (define-constant TRADER 0x03)
@@ -51,8 +50,8 @@
 (define-data-var timelock uint u86400)
 (define-data-var next-timelock
   {
-    duration: uint,
-    ts: uint
+    duration: uint,                                           ;; [uint] - timelock duration in seconds
+    ts: uint                                                  ;; [uint] - activation timestamp
   }
   {
     duration: (get-timelock),
@@ -63,8 +62,8 @@
 (define-data-var owner principal tx-sender)
 (define-data-var next-owner
   {
-    address: principal,
-    ts: uint
+    address: principal,                                       ;; [principal] - next owner address
+    ts: uint                                                  ;; [uint] - activation timestamp
   }
   {
     address: tx-sender,
@@ -78,18 +77,19 @@
 
 (define-map roles 
   {
-    type: (buff 1),
-    address: principal
+    type: (buff 1),                                           ;; [buff 1] - role type
+    address: principal                                        ;; [principal] - role address
   }
   {
     active: bool
   }
 )
 
+;; @desc - stores time-locked requests
 (define-map update-requests 
   {
-    type: (buff 1), 
-    address: principal
+    type: (buff 1),                                          ;; [buff 1] - role type
+    address: principal                                       ;; [principal] - role address
   }
   {
     ts: uint,
@@ -368,10 +368,10 @@
 )
 
 ;;-------------------------------------
-;; Role-Specific Functions
+;; Role updates
 ;;-------------------------------------
 
-;; Request role update functions
+;; request
 (define-public (request-admin-update (address principal) (is-add bool))
   (request-update ADMIN address is-add)
 )
@@ -400,7 +400,7 @@
   (request-update PROTOCOL address is-add)
 )
 
-;; Cancel role request functions
+;; cancel
 (define-public (cancel-admin-request (address principal))
   (cancel-update ADMIN address)
 )
@@ -429,7 +429,7 @@
   (cancel-update PROTOCOL address)
 )
 
-;; Confirm role request functions
+;; confirm
 (define-public (confirm-admin-request (address principal))
   (confirm-update ADMIN address)
 )

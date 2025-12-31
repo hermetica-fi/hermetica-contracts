@@ -1,6 +1,6 @@
-;; @contract Vault State
+;; @contract State
 ;; @version 1
-;; @desc State contract for hBTC protocol
+;; @description Holds protocol configuration and state
 
 (use-trait ft .sip-010-trait.sip-010-trait)
 
@@ -48,7 +48,7 @@
 (define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
 (define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 
-;; Timelocked update type IDs for uint vars (0x01-0x7F)
+;; Timelocked vars
 (define-constant MAX_REWARD 0x01)
 (define-constant MAX_DEVIATION 0x02)
 (define-constant MAX_SLIPPAGE 0x03)
@@ -56,7 +56,7 @@
 (define-constant COOLDOWN 0x05)
 (define-constant UPDATE_WINDOW 0x06)
 
-;; Timelocked update type IDs for maps (0x80-0xFF)
+;; Timelocked maps
 (define-constant ASSET 0x80)
 (define-constant EXTERNAL 0x81)
 
@@ -65,7 +65,6 @@
 ;;-------------------------------------
 
 ;; Fee Settings
-
 (define-data-var fee-address principal tx-sender)
 (define-data-var fees
   { mgmt-fee: uint, perf-fee: uint, exit-fee: uint, express-fee: uint }
@@ -103,7 +102,7 @@
 ;; Maps
 ;;-------------------------------------
 
-;; sip-010 tokens that the vault can interact with
+;; SIP-010 tokens the protocol can interact with
 (define-map assets
   {
     address: principal                                            ;; token contract address
@@ -117,7 +116,7 @@
   }
 )
 
-;; external contracts that the vault can interact with 
+;; External contracts the protocol can interact with 
 (define-map externals 
   {
     address: principal                                            ;; external contract address
@@ -147,19 +146,19 @@
 
 (define-map update-requests 
   {
-    type: (buff 1),
-    address: (optional principal)  ;; none for vars, some(principal) for maps
+    type: (buff 1),                                               ;; [buff 1] - [0x01-0x7F] for vars, [0x80-0xFF] for maps
+    address: (optional principal)                                 ;; [optional principal] - [none] for vars, [principal] for maps
   }
   {
-    ts: uint,
-    value: (optional uint),          ;; some(uint) for vars, none for maps
-    is-add: bool,                    ;; true for add operations, false for remove (only used for ASSET/EXTERNAL types)
-    asset-config: (optional {
-      price-feed-id: (buff 32),
-      token-base: uint,
-      max-slippage: uint,
-      is-stablecoin: bool
-    })                              ;; some(config) for ASSET add operations, none otherwise
+    ts: uint,                                                     ;; [uint] - activation timestamp
+    value: (optional uint),                                       ;; [optional uint] - [uint] for vars, [none] for maps
+    is-add: bool,                                                 ;; [bool] - true for add operations, false for remove (only used for ASSET/EXTERNAL types)
+    asset-config: (optional {                                     ;; [optional tuple] - [some(config)] for ASSET add operations, [none] otherwise
+      price-feed-id: (buff 32),                                   ;; [32 bytes] - Pyth price feed identifier
+      token-base: uint,                                           ;; [uint] - token decimal base (e.g., 10^6, 10^8)
+      max-slippage: uint,                                         ;; [uint] - max swap slippage allowed for this asset
+      is-stablecoin: bool                                         ;; [bool] - whether asset is USD stablecoin (affects pricing logic)
+    })                                                         
   }
 )
 
@@ -371,12 +370,12 @@
   { total-assets: (get-total-assets), net-assets: (get-net-assets), fees: (get-fees), pending-rf: (get-pending-rf), reserve-rate: (get-reserve-rate) }
 )
 
-;; @desc - Batch getter for deposit operation - returns all state needed for deposit validation
+;; @desc - Batch getter for deposit operation 
 (define-read-only (get-deposit-state (assets-in uint))
   { shares: (convert-to-shares assets-in), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-deposit: (get-min-deposit) }
 )
 
-;; @desc - Batch getter for redeem operation - returns all data needed
+;; @desc - Batch getter for redeem operation 
 (define-read-only (get-redeem-state (user principal) (is-express bool))
   { share-price: (get-share-price), exit-fee: (get-custom-exit-fee user is-express), cooldown: (get-custom-cooldown user is-express), min-redeem: (get-min-redeem) }
 )
@@ -551,7 +550,6 @@
   )
 )
 
-;; PUBLIC: Batch update with share price protection and optional commit-reward and shares update
 (define-public (update-state 
   (operations (list 10 { type: (string-ascii 14), amount: uint, is-add: bool }))
   (reward (optional { reward: uint, is-add: bool }))
@@ -564,7 +562,7 @@
     (try! (contract-call? .hq-hbtc check-is-protocol contract-caller))
     (asserts! (> (len operations) u0) ERR_NO_OPERATIONS)
     
-    ;; Execute ALL operations before checking
+    ;; Execute all operations
     (try! (fold execute-update operations (ok true)))
     
     (let ((post-share-supply
@@ -589,7 +587,7 @@
           true)
         true)
       
-      ;; POST-CONDITION: Check share price deviation after all updates
+      ;; Check share price deviation after all updates
       (let (
         (new-share-price (get-share-price))
       )
@@ -719,7 +717,7 @@
   (confirm-update type (some address))
 )
 
-;; Variable update request functions
+;; Var updates
 (define-public (request-max-reward-update (new-value uint))
   (begin
     (asserts! (<= new-value (get reward max)) ERR_ABOVE_MAX)
@@ -763,7 +761,7 @@
   )
 )
 
-;; Variable cancel functions
+;; Var cancels
 (define-public (cancel-max-reward-request)
   (cancel-var-update MAX_REWARD)
 )
@@ -788,7 +786,7 @@
   (cancel-var-update MAX_SLIPPAGE)
 )
 
-;; Variable confirm functions
+;; Var confirms
 (define-public (confirm-max-reward-request)
   (confirm-var-update MAX_REWARD)
 )
@@ -814,7 +812,7 @@
 )
 
 ;;-------------------------------------
-;; Asset Request Functions
+;; Asset updates
 ;;-------------------------------------
 
 (define-public (request-asset-add (address principal) (data {
@@ -846,7 +844,7 @@
 )
 
 ;;-------------------------------------
-;; External Request Functions
+;; External updates
 ;;-------------------------------------
 
 (define-public (request-external-add (address principal))
