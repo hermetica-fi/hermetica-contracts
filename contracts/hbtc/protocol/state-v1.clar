@@ -135,14 +135,6 @@
 )
 
 ;;-------------------------------------
-;; Helper
-;;-------------------------------------
-
-(define-private (get-current-ts)
-  (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1)))
-)
-
-;;-------------------------------------
 ;; Getters
 ;;-------------------------------------
 
@@ -393,7 +385,7 @@
 )
 
 (define-read-only (check-update-window)
-  (ok (asserts! (>= (get-current-ts) (+ (get-last-log-ts) (get-update-window))) ERR_WINDOW_CLOSED))
+  (ok (asserts! (>= stacks-block-time (+ (get-last-log-ts) (get-update-window))) ERR_WINDOW_CLOSED))
 )
 
 (define-read-only (check-max-reward (amount uint))
@@ -475,11 +467,9 @@
 )
 
 (define-private (update-last-log-ts)
-  (let (
-    (current (get-current-ts))
-  )
-    (print { action: "update-last-log-ts", data: { old: (get-last-log-ts), new: current } })
-    (var-set last-log-ts current)
+  (begin
+    (print { action: "update-last-log-ts", data: { old: (get-last-log-ts), new: stacks-block-time } })
+    (var-set last-log-ts stacks-block-time)
   )
 )
 
@@ -588,7 +578,7 @@
     (asserts! (<= express-fee (get express-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= exit-fee express-fee) ERR_INVALID)
     (if (or mgmt-changed perf-changed)
-      (asserts! (or (<= (get-current-ts) (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+      (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
       true)
     (print { action: "set-fees", user: contract-caller, data: { old: current-fees, new: new-fees } })
     (ok (var-set fees new-fees))
@@ -841,7 +831,7 @@
   (let (
     (token-address (contract-of token))
     (token-base (pow u10 (unwrap-panic (contract-call? token get-decimals))))
-    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-activation-delay)))
+    (activation-ts (+ stacks-block-time (contract-call? .hq-hbtc get-activation-delay)))
     (new-entry { active: false, ts: (some activation-ts), price-feed-id: price-feed-id, token-base: token-base, max-slippage: max-slippage, is-stablecoin: is-stablecoin })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
@@ -887,7 +877,7 @@
 
 (define-public (request-new-external (address principal))
   (let (
-    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-activation-delay)))
+    (activation-ts (+ stacks-block-time (contract-call? .hq-hbtc get-activation-delay)))
     (new-entry { active: false, ts: (some activation-ts) })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))

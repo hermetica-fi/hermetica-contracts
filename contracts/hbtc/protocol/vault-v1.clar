@@ -20,7 +20,6 @@
 (define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
 (define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
 
-(define-constant this-contract (as-contract tx-sender))
 (define-constant reserve .reserve)
 (define-constant sbtc-token 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)
 (define-constant fee-collector .fee-collector)
@@ -62,10 +61,6 @@
   (ok (unwrap! (map-get? claims { claim-id: id }) ERR_NO_CLAIM_FOR_ID))
 )
 
-(define-private (get-current-ts)
-  (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1)))
-)
-
 ;;-------------------------------------
 ;; User
 ;;-------------------------------------
@@ -96,10 +91,10 @@
 (define-private (create-claim (shares uint) (exit-fee uint) (cooldown uint))
   (let (
     (new-claim-id (try! (contract-call? .state increment-claim-id)))
-    (ts (+ (get-current-ts) cooldown))
+    (ts (+ stacks-block-time cooldown))
   )
     ;; Transfer shares from user to vault
-    (try! (contract-call? .hbtc-token transfer shares contract-caller this-contract none))
+    (try! (contract-call? .hbtc-token transfer shares contract-caller current-contract none))
     
     (map-set claims { claim-id: new-claim-id } 
       {
@@ -158,11 +153,11 @@
     (user (get user current-claim))
     (assets-net (- assets fee))
   )
-    (asserts! (>= (get-current-ts) (get ts current-claim)) ERR_NOT_COOLED_DOWN)
+    (asserts! (>= stacks-block-time (get ts current-claim)) ERR_NOT_COOLED_DOWN)
     (try! (contract-call? .blacklist check-is-not-soft user))
-    (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer assets-net this-contract user none)))
+    (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer assets-net current-contract user none))
     (if (> fee u0)
-      (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer fee this-contract fee-collector none)))
+      (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer fee current-contract fee-collector none))
       true
     )
     (print { action: "redeem", user: contract-caller, data: { claim-id: claim-id, assets: assets, fee: fee, user: user, fee-address: fee-collector } })
@@ -182,7 +177,7 @@
     (asserts! (is-none (get assets claim)) ERR_ALREADY_FUNDED)
     (try! (contract-call? .blacklist check-is-not-soft claim-user))
     
-    (try! (contract-call? .hbtc-token transfer shares this-contract claim-user none))
+    (try! (contract-call? .hbtc-token transfer shares current-contract claim-user none))
     (map-delete claims { claim-id: claim-id })
     (print { action: "cancel-redeem", user: contract-caller, data: { claim-id: claim-id, shares: shares } })
     (ok shares)
@@ -204,12 +199,12 @@
     (shares (get shares result))
   )
     ;; Transfer assets from reserve to vault and update state
-    (try! (contract-call? .reserve transfer sbtc-token assets this-contract))
+    (try! (contract-call? .reserve transfer sbtc-token assets current-contract))
     (try! (contract-call? .state update-state 
       (list
         { type: "total-assets", amount: assets, is-add: false })
       none
-      (some { amount: shares, is-add: false, user: this-contract })))
+      (some { amount: shares, is-add: false, user: current-contract })))
     (print { action: "fund-claim", user: contract-caller, data: { claim-id: claim-id, shares: shares, assets: assets, share-price: share-price } })
     (ok assets)
   )
@@ -228,12 +223,12 @@
         (let ((total-assets-accum (get total-assets accum)))
           ;; Transfer accumulated assets from reserve to vault in a single batch and update state
           (asserts! (> total-assets-accum u0) ERR_EMPTY_LIST)
-          (try! (contract-call? .reserve transfer sbtc-token total-assets-accum this-contract))
+          (try! (contract-call? .reserve transfer sbtc-token total-assets-accum current-contract))
           (try! (contract-call? .state update-state
             (list
               { type: "total-assets", amount: total-assets-accum, is-add: false })
             none
-            (some { amount: (get total-shares accum), is-add: false, user: this-contract })))
+            (some { amount: (get total-shares accum), is-add: false, user: current-contract })))
           (print { action: "fund-claim-many", user: contract-caller, data: { total-shares: (get total-shares accum), total-assets: total-assets-accum } })
           (ok true)
         )
@@ -272,7 +267,7 @@
   (maybe-manager (optional bool)))
   (let (
     (shares (get shares claim))
-    (is-cooled-down (>= (get-current-ts) (get ts claim)))
+    (is-cooled-down (>= stacks-block-time (get ts claim)))
     (assets (/ (* shares share-price) share-base))
     (fee (/ (* assets (get fee-bps claim)) bps-base))
   )
