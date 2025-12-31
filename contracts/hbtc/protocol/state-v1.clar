@@ -817,16 +817,16 @@
 ;; Asset Request Functions
 ;;-------------------------------------
 
-(define-public (request-asset-add (address principal) (data {
-  price-feed-id: (buff 32),
-  token-base: uint,
-  max-slippage: uint,
-  is-stablecoin: bool
-}))
+(define-public (request-asset-add (address principal) (price-feed-id (buff 32)) (token-base uint) (asset-max-slippage uint) (is-stablecoin bool))
   (begin
     (asserts! (is-none (map-get? assets { address: address })) ERR_DUPLICATE)
-    (asserts! (<= (get max-slippage data) (get-max-slippage)) ERR_ABOVE_MAX)
-    (request-map-update ASSET address true (some data))
+    (asserts! (<= asset-max-slippage (get-max-slippage)) ERR_ABOVE_MAX)
+    (request-map-update ASSET address true (some {
+      price-feed-id: price-feed-id,
+      token-base: token-base,
+      max-slippage: asset-max-slippage,
+      is-stablecoin: is-stablecoin
+    }))
   )
 )
 
