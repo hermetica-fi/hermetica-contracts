@@ -27,6 +27,8 @@
 (define-constant ERR_EXPRESS_DISABLED (err u102017))
 (define-constant ERR_FEE_WINDOW (err u102018))
 (define-constant ERR_INVALID_TYPE (err u102019))
+(define-constant ERR_LIMIT_EXCEEDED (err u102020))
+(define-constant ERR_REWARD_DISABLED (err u102021))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
@@ -48,17 +50,20 @@
 (define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
 (define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 
-;; Timelocked update type IDs for uint vars (0x01-0x7F)
+;; Timelocked update type IDs for uint vars (0x01-0x9F)
 (define-constant MAX_REWARD 0x01)
 (define-constant MAX_DEVIATION 0x02)
 (define-constant MAX_SLIPPAGE 0x03)
 (define-constant MIN_REDEEM 0x04)
 (define-constant COOLDOWN 0x05)
-(define-constant UPDATE_WINDOW 0x06)
+(define-constant EXPRESS_COOLDOWN 0x06)
+(define-constant EXPRESS_LIMIT 0x07)
+(define-constant EXPRESS_WINDOW 0x08)
+(define-constant UPDATE_WINDOW 0x09)
 
-;; Timelocked update type IDs for maps (0x80-0xFF)
-(define-constant ASSET 0x80)
-(define-constant EXTERNAL 0x81)
+;; Timelocked update type IDs for maps (0xA0-0xFF)
+(define-constant ASSET 0xA0)
+(define-constant EXTERNAL 0xA1)
 
 ;;-------------------------------------
 ;; Variables
@@ -80,7 +85,9 @@
 (define-data-var min-deposit uint u100)                           ;; [8 decimals] - minimum deposit amount
 (define-data-var min-redeem uint u100)                            ;; [8 decimals] - minimum redeem amount
 (define-data-var cooldown uint u259200)                           ;; [259200 seconds] => 3 days - default redeem cooldown period
-(define-data-var express-cooldown uint u3600)                     ;; [3600 seconds] => 1 hour - express redeem cooldown period
+(define-data-var express-cooldown uint u14400)                    ;; [14400 seconds] => 4 hours - express redeem cooldown period
+(define-data-var express-limit uint u250)                         ;; [250 bps] => 2.50% - express limit as bps of net-assets per window
+(define-data-var express-window uint u86400)                      ;; [86400 seconds] => 1 day - reset window for express limit
 (define-data-var update-window uint u86340)                       ;; [86340 seconds] => 23 hours and 59 minutes - min time between reward updates
 (define-data-var staleness-window uint u50)                       ;; [50 seconds] => ~50 seconds - price staleness check
 
@@ -90,7 +97,7 @@
 (define-data-var deposit-active bool true)                        ;; deposits enabled/disabled flag
 (define-data-var redeem-active bool true)                         ;; redeems enabled/disabled flag
 (define-data-var trading-active bool true)                        ;; trading enabled/disabled flag
-(define-data-var express-active bool true)                        ;; express redeems enabled/disabled flag
+(define-data-var express-active bool false)                       ;; express redeems enabled/disabled flag
 
 ;; Accounting Variables
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
@@ -98,6 +105,10 @@
 (define-data-var pending-rf uint u0)                              ;; [8 decimals] - total pending reserve fund payable to protocol
 (define-data-var claim-id uint u0)                                ;; [counter] - current claim ID
 (define-data-var last-log-ts uint u0)                             ;; [unix timestamp] - last reward log timestamp
+
+;; Express Limit Tracking Variables
+(define-data-var current-express-limit uint u0)                   ;; [8 decimals] - current available sBTC amount for express withdrawals
+(define-data-var last-express-ts uint u0)                         ;; [unix timestamp] - timestamp of last express limit reset
 
 ;;-------------------------------------
 ;; Maps
@@ -285,6 +296,29 @@
   (var-get claim-id)
 )
 
+(define-read-only (get-express-limit)
+  (var-get express-limit)
+)
+
+(define-read-only (get-effective-express-limit)
+  (if (>= (get-current-ts) (+ (get-last-express-ts) (get-express-window)))
+    (/ (* (get-net-assets) (get-express-limit)) bps-base)
+    (var-get current-express-limit)
+  )
+)
+
+(define-read-only (get-express-window)
+  (var-get express-window)
+)
+
+(define-read-only (get-last-express-ts)
+  (var-get last-express-ts)
+)
+
+(define-read-only (get-current-express-limit)
+  (var-get current-express-limit)
+)
+
 (define-read-only (get-vault-active)
   (var-get vault-active)
 )
@@ -452,10 +486,17 @@
   )
 )
 
-(define-read-only (check-redeem-auth (is-express bool))
+(define-public (check-redeem-auth (shares uint) (is-express bool))
   (begin
     (try! (check-is-redeem-active))
-    (if is-express (check-is-express-active) (ok true))
+    (if is-express 
+      (begin
+        (try! (check-is-express-active))
+        (try! (consume-express-limit (convert-to-assets shares)))
+        (ok true)
+      )
+      (ok true) ;; if not express, no limit consumption
+    )
   )
 )
 
@@ -614,6 +655,33 @@
 )
 
 ;;-------------------------------------
+;; Express Limit Helpers
+;;-------------------------------------
+
+;; @desc - Consume express limit when express claim is created (private)
+;; @desc - Resets limit if window elapsed, validates against effective limit, then consumes
+;; @param - assets-in: amount of sBTC to consume from express limit
+(define-private (consume-express-limit (assets-in uint))
+  (let (
+    (is-reset (if (>= (get-current-ts) (+ (get-last-express-ts) (get-express-window))) true false))
+    (limit (if is-reset
+      (/ (* (get-net-assets) (get-express-limit)) bps-base)
+      (get-current-express-limit)))
+  )
+    (asserts! (<= assets-in limit) ERR_LIMIT_EXCEEDED)
+    (if (contract-call? .hq-hbtc get-protocol contract-caller)
+      (begin
+        (print { action: "consume-express-limit", user: contract-caller, data: { old: (get-current-express-limit), new: (- limit assets-in) , is-reset: is-reset } })
+        (if is-reset (var-set last-express-ts (get-current-ts)) true)
+        (var-set current-express-limit (- limit assets-in))
+        (ok true))
+      (ok true) ;; if not hq, no limit consumption
+    )
+  )
+)
+
+
+;;-------------------------------------
 ;; Timelocked Update Helpers
 ;;-------------------------------------
 
@@ -670,7 +738,10 @@
   (if (is-eq type MIN_REDEEM) (var-set min-redeem val)
   (if (is-eq type COOLDOWN) (var-set cooldown val)
   (if (is-eq type UPDATE_WINDOW) (var-set update-window val)
-  false)))))) ;; if no match, return false
+  (if (is-eq type EXPRESS_COOLDOWN) (var-set express-cooldown val)
+  (if (is-eq type EXPRESS_LIMIT) (var-set express-limit val)
+  (if (is-eq type EXPRESS_WINDOW) (var-set express-window val)
+  false))))))))) ;; if no match, return false
 )
 
 (define-private (execute-map-update 
@@ -749,6 +820,28 @@
   )
 )
 
+(define-public (request-express-cooldown-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
+    (asserts! (<= new-value (get-cooldown)) ERR_INVALID)
+    (request-var-update EXPRESS_COOLDOWN new-value)
+  )
+)
+
+(define-public (request-express-limit-update (new-value uint))
+  (begin
+    (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)
+    (request-var-update EXPRESS_LIMIT new-value)
+  )
+)
+
+(define-public (request-express-window-update (new-value uint))
+  (begin
+    (asserts! (> new-value u0) ERR_BELOW_MIN)
+    (request-var-update EXPRESS_WINDOW new-value)
+  )
+)
+
 (define-public (request-update-window-update (new-value uint))
   (begin
     (asserts! (>= new-value (get update-window min)) ERR_BELOW_MIN)
@@ -780,6 +873,18 @@
   (cancel-var-update COOLDOWN)
 )
 
+(define-public (cancel-express-cooldown-request)
+  (cancel-var-update EXPRESS_COOLDOWN)
+)
+
+(define-public (cancel-express-limit-request)
+  (cancel-var-update EXPRESS_LIMIT)
+)
+
+(define-public (cancel-express-window-request)
+  (cancel-var-update EXPRESS_WINDOW)
+)
+
 (define-public (cancel-update-window-request)
   (cancel-var-update UPDATE_WINDOW)
 )
@@ -803,6 +908,18 @@
 
 (define-public (confirm-cooldown-request)
   (confirm-var-update COOLDOWN)
+)
+
+(define-public (confirm-express-cooldown-request)
+  (confirm-var-update EXPRESS_COOLDOWN)
+)
+
+(define-public (confirm-express-limit-request)
+  (confirm-var-update EXPRESS_LIMIT)
+)
+
+(define-public (confirm-express-window-request)
+  (confirm-var-update EXPRESS_WINDOW)
 )
 
 (define-public (confirm-update-window-request)
@@ -937,16 +1054,6 @@
   )
 )
 
-(define-public (set-express-cooldown (new-cooldown uint))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (asserts! (<= new-cooldown (get cooldown max)) ERR_ABOVE_MAX)
-    (asserts! (<= new-cooldown (get-cooldown)) ERR_INVALID)
-    (print { action: "set-express-cooldown", user: contract-caller, data: { old: (get-express-cooldown), new: new-cooldown } })
-    (ok (var-set express-cooldown new-cooldown))
-  )
-)
-
 (define-private (set-custom-cooldown-iter (entry { address: principal, new-cooldown: uint }) (prev (response bool uint)))
   (let (
     (address (get address entry))
@@ -961,7 +1068,7 @@
 
 (define-public (set-custom-cooldown (entries (list 200 { address: principal, new-cooldown: uint })))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-custom-cooldown", user: contract-caller, data: { entries: entries } })
     (fold set-custom-cooldown-iter entries (ok true))
   )
@@ -972,7 +1079,7 @@
 
 (define-public (remove-custom-cooldown (addresses (list 200 principal)))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "remove-custom-cooldown", user: contract-caller, data: { addresses: addresses } })
     (fold remove-custom-cooldown-iter addresses (ok true))
   )
