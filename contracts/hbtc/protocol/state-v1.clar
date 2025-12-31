@@ -28,6 +28,7 @@
 (define-constant ERR_FEE_WINDOW (err u102018))
 (define-constant ERR_INVALID_TYPE (err u102019))
 (define-constant ERR_REWARD_DISABLED (err u102020))
+(define-constant ERR_EMERGENCY_BLOCKED (err u102022))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
@@ -224,11 +225,11 @@
 )
 
 (define-read-only (get-cooldown)
-  (if (is-emergency-active) u0 (var-get cooldown))
+  (var-get cooldown)
 )
 
 (define-read-only (get-express-cooldown)
-  (if (is-emergency-active) u0 (var-get express-cooldown))
+  (var-get express-cooldown)
 )
 
 (define-read-only (get-deposit-cap)
@@ -288,27 +289,27 @@
 )
 
 (define-read-only (get-vault-active)
-  (emergency-or true (var-get vault-active))
+  (var-get vault-active)
 )
 
 (define-read-only (get-transfer-active)
-  (emergency-or true (var-get transfer-active))
+  (var-get transfer-active)
 )
 
 (define-read-only (get-deposit-active)
-  (emergency-or false (var-get deposit-active))  ;; Emergency override: prevent new deposits
+  (var-get deposit-active)
 )
 
 (define-read-only (get-redeem-active)
-  (emergency-or true (var-get redeem-active))
+  (var-get redeem-active)
 )
 
 (define-read-only (get-trading-active)
-  (emergency-or true (var-get trading-active))
+  (var-get trading-active)
 )
 
 (define-read-only (get-express-active)
-  (emergency-or true (var-get express-active))
+  (var-get express-active)
 )
 
 (define-read-only (get-reward-active)
@@ -338,12 +339,14 @@
 )
 
 (define-read-only (get-custom-cooldown (address principal) (is-express bool))
-  (if is-express
-    (get-express-cooldown)
-    (get cooldown
-      (default-to
-        { cooldown: (get-cooldown) }
-        (map-get? custom-cooldown { address: address })))
+  (if (contract-call? .hq-hbtc get-emergency-active)
+    (var-get cooldown)  ;; Emergency: apply standard cooldown to everyone
+    (if is-express
+      (var-get express-cooldown)
+      (get cooldown
+        (default-to
+          { cooldown: (var-get cooldown) }
+          (map-get? custom-cooldown { address: address }))))
   )
 )
 
@@ -391,58 +394,90 @@
 ;; Checks
 ;;-------------------------------------
 
+;; @desc - Emergency: BYPASSED
 (define-read-only (check-is-vault-active)
-  (check-emergency-or
+  (if (contract-call? .hq-hbtc get-emergency-active)
+    (ok true)
     (begin
       (try! (contract-call? .hq-hbtc check-is-protocol-active))
-      (ok (asserts! (get-vault-active) ERR_VAULT_DISABLED))
+      (ok (asserts! (var-get vault-active) ERR_VAULT_DISABLED))
     )
   )
 )
 
+;; @desc - Emergency: NOT bypassed (deposits blocked)
 (define-read-only (check-is-deposit-active)
   (begin
-    (try! (check-is-vault-active))
-    (ok (asserts! (get-deposit-active) ERR_DEPOSIT_DISABLED))
+    (asserts! (not (contract-call? .hq-hbtc get-emergency-active)) ERR_EMERGENCY_BLOCKED)
+    (try! (contract-call? .hq-hbtc check-is-protocol-active))
+    (asserts! (var-get vault-active) ERR_VAULT_DISABLED)
+    (ok (asserts! (var-get deposit-active) ERR_DEPOSIT_DISABLED))
   )
 )
 
+;; @desc - Emergency: BYPASSED
 (define-read-only (check-is-redeem-active)
-  (check-emergency-or
+  (if (contract-call? .hq-hbtc get-emergency-active)
+    (ok true)
     (begin
-      (try! (check-is-vault-active))
-      (ok (asserts! (get-redeem-active) ERR_REDEEM_DISABLED))
+      (try! (contract-call? .hq-hbtc check-is-protocol-active))
+      (asserts! (var-get vault-active) ERR_VAULT_DISABLED)
+      (ok (asserts! (var-get redeem-active) ERR_REDEEM_DISABLED))
     )
   )
 )
 
+;; @desc - Emergency: Partially BYPASSED (express blocked on emergency)
 (define-read-only (check-redeem-auth (is-express bool))
-  (begin
-    (try! (check-is-redeem-active))
-    (if is-express (check-is-express-active) (ok true))
-  )
-)
-
-(define-read-only (check-is-express-active)
-  (ok (asserts! (get-express-active) ERR_EXPRESS_DISABLED))
-)
-
-(define-read-only (check-is-transfer-active)
-  (ok (asserts! (get-transfer-active) ERR_TRANSFER_DISABLED))
-)
-
-(define-read-only (check-is-trading-active)
-  (begin
-    (try! (check-is-vault-active))
-    (ok (asserts! (get-trading-active) ERR_TRADING_DISABLED))
-  )
-)
-
-(define-read-only (check-is-reward-active)
-  (check-emergency-or
+  (if (contract-call? .hq-hbtc get-emergency-active)
+    (ok (asserts! (not is-express) ERR_EMERGENCY_BLOCKED))
     (begin
       (try! (contract-call? .hq-hbtc check-is-protocol-active))
-      (ok (asserts! (get-reward-active) ERR_REWARD_DISABLED))
+      (asserts! (var-get vault-active) ERR_VAULT_DISABLED)
+      (asserts! (var-get redeem-active) ERR_REDEEM_DISABLED)
+      (if is-express
+        (ok (asserts! (var-get express-active) ERR_EXPRESS_DISABLED))
+        (ok true)
+      )
+    )
+  )
+)
+
+;; @desc - Emergency: NOT BYPASSED (express blocked)
+(define-read-only (check-is-express-active)
+  (begin
+    (asserts! (not (contract-call? .hq-hbtc get-emergency-active)) ERR_EMERGENCY_BLOCKED)
+    (ok (asserts! (var-get express-active) ERR_EXPRESS_DISABLED))
+  )
+)
+
+;; @desc - Emergency: BYPASSED
+(define-read-only (check-is-transfer-active)
+  (if (contract-call? .hq-hbtc get-emergency-active)
+    (ok true)
+    (ok (asserts! (var-get transfer-active) ERR_TRANSFER_DISABLED))
+  )
+)
+
+;; @desc - Emergency: BYPASSED
+(define-read-only (check-is-trading-active)
+  (if (contract-call? .hq-hbtc get-emergency-active)
+    (ok true)
+    (begin
+      (try! (contract-call? .hq-hbtc check-is-protocol-active))
+      (asserts! (var-get vault-active) ERR_VAULT_DISABLED)
+      (ok (asserts! (var-get trading-active) ERR_TRADING_DISABLED))
+    )
+  )
+)
+
+;; @desc - Emergency: BYPASSED
+(define-read-only (check-is-reward-active)
+  (if (contract-call? .hq-hbtc get-emergency-active)
+    (ok true)
+    (begin
+      (try! (contract-call? .hq-hbtc check-is-protocol-active))
+      (ok (asserts! (var-get reward-active) ERR_REWARD_DISABLED))
     )
   )
 )
@@ -478,14 +513,20 @@
   )
 )
 
+;; @desc - Emergency: Partially BYPASSED (asset checks still enforced)
 (define-read-only (check-transfer-auth (asset principal))
-  (begin
-    (try! (check-is-vault-active))
-    (try! (check-is-transfer-active))
+  (if (contract-call? .hq-hbtc get-emergency-active)
     (check-is-asset asset)
+    (begin
+      (try! (contract-call? .hq-hbtc check-is-protocol-active))
+      (asserts! (var-get vault-active) ERR_VAULT_DISABLED)
+      (asserts! (var-get transfer-active) ERR_TRANSFER_DISABLED)
+      (check-is-asset asset)
+    )
   )
 )
 
+;; @desc - Emergency: Partially BYPASSED (asset and external checks still enforced)
 (define-read-only (check-trading-auth (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
   (begin
     (try! (check-is-trading-active))
@@ -1150,24 +1191,3 @@
   )
 )
 
-;;-------------------------------------
-;; Emergency
-;;-------------------------------------
-
-(define-private (check-emergency-or (normal-check (response bool uint)))
-  (if (is-emergency-active)
-    (ok true)
-    normal-check
-  )
-)
-
-(define-private (emergency-or (override-value bool) (normal-value bool))
-  (if (is-emergency-active)
-    override-value
-    normal-value
-  )
-)
-
-(define-private (is-emergency-active)
-  (contract-call? .hq-hbtc get-emergency-active)
-)
