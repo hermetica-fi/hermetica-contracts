@@ -23,7 +23,8 @@
 (define-constant ERR_TIMELOCK (err u101014))
 (define-constant ERR_NO_ENTRY (err u101015))
 (define-constant ERR_DUPLICATE (err u101016))
-
+(define-constant ERR_ALREADY_ACTIVE (err u101017))
+(define-constant ERR_NOT_ACTIVE (err u101018))
 
 (define-constant max {
   timelock: u2592000,                                     ;; 30 days in seconds
@@ -41,12 +42,16 @@
 (define-constant MANAGER 0x05)
 (define-constant FEE_SETTER 0x06)
 (define-constant PROTOCOL 0x07)
+(define-constant EMERGENCY 0x08)
+
+(define-constant EMERGENCY_SENTINEL tx-sender)
 
 ;;-------------------------------------
 ;; Variables
 ;;-------------------------------------
 
 (define-data-var protocol-active bool true)
+(define-data-var emergency-active bool false)
 
 (define-data-var timelock uint u86400)
 (define-data-var next-timelock
@@ -121,6 +126,10 @@
   (var-get protocol-active)
 )
 
+(define-read-only (get-emergency-active)
+  (var-get emergency-active)
+)
+
 (define-read-only (get-owner)
   (var-get owner)
 )
@@ -184,7 +193,10 @@
 )
 
 (define-read-only (check-is-protocol-active)
-  (ok (asserts! (get-protocol-active) ERR_PROTOCOL_DISABLED))
+  (if (var-get emergency-active)
+    (ok true)
+    (ok (asserts! (get-protocol-active) ERR_PROTOCOL_DISABLED))
+  )
 )
 
 (define-read-only (check-is-owner (address principal))
@@ -336,7 +348,8 @@
     (try! (check-is-standard address))
     (if is-add
       (asserts! (not is-active) ERR_DUPLICATE)
-      (asserts! is-active ERR_NO_ENTRY))
+      (asserts! is-active ERR_NO_ENTRY)
+    )
     (print { action: "request-update", user: contract-caller, data: { type: type, address: address, entry: new-entry } })
     (ok (asserts! (map-insert update-requests { type: type, address: address } new-entry) ERR_DUPLICATE))
   )
@@ -358,9 +371,12 @@
     (try! (check-is-owner contract-caller))
     (try! (check-timelock (get ts entry)))
     (begin
-      (if is-add
-        (map-set roles { type: type, address: address } { active: true })
-        (map-delete roles { type: type, address: address }))
+      (if (is-eq type EMERGENCY)
+        (var-set emergency-active false)
+        (if is-add
+          (map-set roles { type: type, address: address } { active: true })
+          (map-delete roles { type: type, address: address }))
+      )
       (print { action: "confirm-update", user: contract-caller, data: { type: type, address: address, is-add: is-add } })
       (ok (map-delete update-requests { type: type, address: address }))
     )
@@ -456,4 +472,39 @@
 
 (define-public (confirm-protocol-request (address principal))
   (confirm-update PROTOCOL address)
+)
+
+;;-------------------------------------
+;; Emergency
+;;-------------------------------------
+
+(define-public (enable-emergency)
+  (begin
+    (try! (check-is-owner contract-caller))
+    (asserts! (not (get-emergency-active)) ERR_ALREADY_ACTIVE)
+    (print { action: "enable-emergency", user: contract-caller })
+    (ok (var-set emergency-active true))
+  )
+)
+
+(define-public (request-emergency-disable)
+  (begin
+    (asserts! (get-emergency-active) ERR_NOT_ACTIVE)
+    (print { action: "request-emergency-disable", user: contract-caller })
+    (request-update EMERGENCY EMERGENCY_SENTINEL false)
+  )
+)
+
+(define-public (cancel-emergency-disable)
+  (begin
+    (print { action: "cancel-emergency-disable", user: contract-caller })
+    (cancel-update EMERGENCY EMERGENCY_SENTINEL)
+  )
+)
+
+(define-public (confirm-emergency-disable)
+  (begin
+    (print { action: "confirm-emergency-disable", user: contract-caller })
+    (confirm-update EMERGENCY EMERGENCY_SENTINEL)
+  )
 )

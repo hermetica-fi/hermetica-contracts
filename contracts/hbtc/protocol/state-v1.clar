@@ -27,6 +27,7 @@
 (define-constant ERR_EXPRESS_DISABLED (err u102017))
 (define-constant ERR_FEE_WINDOW (err u102018))
 (define-constant ERR_INVALID_TYPE (err u102019))
+(define-constant ERR_REWARD_DISABLED (err u102020))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
@@ -91,6 +92,7 @@
 (define-data-var redeem-active bool true)                         ;; redeems enabled/disabled flag
 (define-data-var trading-active bool true)                        ;; trading enabled/disabled flag
 (define-data-var express-active bool true)                        ;; express redeems enabled/disabled flag
+(define-data-var reward-active bool true)                         ;; rewards enabled/disabled flag
 
 ;; Accounting Variables
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
@@ -222,11 +224,11 @@
 )
 
 (define-read-only (get-cooldown)
-  (var-get cooldown)
+  (if (is-emergency-active) u0 (var-get cooldown))
 )
 
 (define-read-only (get-express-cooldown)
-  (var-get express-cooldown)
+  (if (is-emergency-active) u0 (var-get express-cooldown))
 )
 
 (define-read-only (get-deposit-cap)
@@ -286,27 +288,31 @@
 )
 
 (define-read-only (get-vault-active)
-  (var-get vault-active)
+  (emergency-or true (var-get vault-active))
 )
 
 (define-read-only (get-transfer-active)
-  (var-get transfer-active)
+  (emergency-or true (var-get transfer-active))
 )
 
 (define-read-only (get-deposit-active)
-  (var-get deposit-active)
+  (emergency-or false (var-get deposit-active))  ;; Emergency override: prevent new deposits
 )
 
 (define-read-only (get-redeem-active)
-  (var-get redeem-active)
+  (emergency-or true (var-get redeem-active))
 )
 
 (define-read-only (get-trading-active)
-  (var-get trading-active)
+  (emergency-or true (var-get trading-active))
 )
 
 (define-read-only (get-express-active)
-  (var-get express-active)
+  (emergency-or true (var-get express-active))
+)
+
+(define-read-only (get-reward-active)
+  (var-get reward-active)
 )
 
 (define-read-only (get-asset (address principal))
@@ -386,9 +392,11 @@
 ;;-------------------------------------
 
 (define-read-only (check-is-vault-active)
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-protocol-active))
-    (ok (asserts! (get-vault-active) ERR_VAULT_DISABLED))
+  (check-emergency-or
+    (begin
+      (try! (contract-call? .hq-hbtc check-is-protocol-active))
+      (ok (asserts! (get-vault-active) ERR_VAULT_DISABLED))
+    )
   )
 )
 
@@ -400,9 +408,18 @@
 )
 
 (define-read-only (check-is-redeem-active)
+  (check-emergency-or
+    (begin
+      (try! (check-is-vault-active))
+      (ok (asserts! (get-redeem-active) ERR_REDEEM_DISABLED))
+    )
+  )
+)
+
+(define-read-only (check-redeem-auth (is-express bool))
   (begin
-    (try! (check-is-vault-active))
-    (ok (asserts! (get-redeem-active) ERR_REDEEM_DISABLED))
+    (try! (check-is-redeem-active))
+    (if is-express (check-is-express-active) (ok true))
   )
 )
 
@@ -419,7 +436,16 @@
     (try! (check-is-vault-active))
     (ok (asserts! (get-trading-active) ERR_TRADING_DISABLED))
   )
-) 
+)
+
+(define-read-only (check-is-reward-active)
+  (check-emergency-or
+    (begin
+      (try! (contract-call? .hq-hbtc check-is-protocol-active))
+      (ok (asserts! (get-reward-active) ERR_REWARD_DISABLED))
+    )
+  )
+)
 
 (define-read-only (check-is-asset (address principal))
   (ok (asserts! (get active (get-asset address)) ERR_NOT_ASSET))
@@ -449,13 +475,6 @@
                   u0))  ;; Handle edge case of last redeem
   )
     (ok (asserts! (<= deviation threshold) ERR_DEVIATION))
-  )
-)
-
-(define-read-only (check-redeem-auth (is-express bool))
-  (begin
-    (try! (check-is-redeem-active))
-    (if is-express (check-is-express-active) (ok true))
   )
 )
 
@@ -1102,6 +1121,22 @@
   )
 )
 
+(define-public (set-reward-active (active bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (print { action: "set-reward-active", user: contract-caller, data: { old: (get-reward-active), new: active } })
+    (ok (var-set reward-active active))
+  ) 
+)
+
+(define-public (disable-reward)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
+    (print { action: "disable-reward", user: contract-caller, data: { old: (get-reward-active), new: false } })
+    (ok (var-set reward-active false))
+  )
+)
+
 (define-public (set-asset-slippage (address principal) (new-slippage uint))
   (let (
     (entry (get-asset address))
@@ -1113,4 +1148,26 @@
     (print { action: "set-asset-slippage", user: contract-caller, data: { address: address, old: entry, new: updated-entry } })
     (ok (map-set assets { address: address } updated-entry))
   )
+)
+
+;;-------------------------------------
+;; Emergency
+;;-------------------------------------
+
+(define-private (check-emergency-or (normal-check (response bool uint)))
+  (if (is-emergency-active)
+    (ok true)
+    normal-check
+  )
+)
+
+(define-private (emergency-or (override-value bool) (normal-value bool))
+  (if (is-emergency-active)
+    override-value
+    normal-value
+  )
+)
+
+(define-private (is-emergency-active)
+  (contract-call? .hq-hbtc get-emergency-active)
 )

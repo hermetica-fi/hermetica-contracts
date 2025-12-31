@@ -86,24 +86,38 @@
   (ok (asserts! (get-blacklister address) ERR_NOT_BLACKLISTER))
 )
 
-(define-read-only (check-is-not-soft (address principal))
-  (ok (if (get-soft-blacklist-active)
-    (asserts! (not (get-soft-blacklist address)) ERR_SOFT_BLACKLISTED)
-    (try! (check-is-not-full address))
-  ))
-)
-
-(define-read-only (check-is-not-full (address principal))
+;; Private helper - skips emergency check (assumes caller already verified)
+(define-private (check-full-blacklist-internal (address principal))
   (ok (if (get-full-blacklist-active)
     (asserts! (not (get-full-blacklist address)) ERR_FULLY_BLACKLISTED)
     true
   ))
 )
 
-(define-read-only (check-is-not-full-two (address1 principal) (address2 principal))
-  (ok (if (get-full-blacklist-active)
-    (asserts! (and (not (get-full-blacklist address1)) (not (get-full-blacklist address2))) ERR_FULLY_BLACKLISTED)
+(define-read-only (check-is-not-soft (address principal))
+  (ok (if (contract-call? .hq-hbtc get-emergency-active)
     true
+    (if (get-soft-blacklist-active)
+      (asserts! (not (get-soft-blacklist address)) ERR_SOFT_BLACKLISTED)
+      (try! (check-full-blacklist-internal address))
+    )
+  ))
+)
+
+(define-read-only (check-is-not-full (address principal))
+  (ok (if (contract-call? .hq-hbtc get-emergency-active)
+    true
+    (try! (check-full-blacklist-internal address))
+  ))
+)
+
+(define-read-only (check-is-not-full-two (address1 principal) (address2 principal))
+  (ok (if (contract-call? .hq-hbtc get-emergency-active)
+    true
+    (if (get-full-blacklist-active)
+      (asserts! (and (not (get-full-blacklist address1)) (not (get-full-blacklist address2))) ERR_FULLY_BLACKLISTED)
+      true
+    )
   ))
 )
 
