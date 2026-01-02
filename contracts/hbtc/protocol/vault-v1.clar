@@ -16,6 +16,7 @@
 (define-constant ERR_NOT_FUNDED (err u103006))
 (define-constant ERR_EMPTY_LIST (err u103007))
 (define-constant ERR_NOT_AUTHORIZED (err u103008))
+(define-constant ERR_STALE_SHARE_PRICE (err u103009))
 
 (define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
 (define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
@@ -78,6 +79,7 @@
   )
     (try! (contract-call? .blacklist check-is-not-soft contract-caller))
     (try! (contract-call? .state check-is-deposit-active))
+    (asserts! (not (get is-sp-stale state)) ERR_STALE_SHARE_PRICE)
     (asserts! (<= (+ (get net-assets state) assets) (get deposit-cap state)) ERR_DEPOSIT_CAP_EXCEEDED)
     (asserts! (>= assets (get min-deposit state)) ERR_BELOW_MIN)
 
@@ -197,12 +199,14 @@
 (define-public (fund-claim (claim-id uint))
   (let (
     (is-manager (contract-call? .hq-hbtc get-manager contract-caller))
-    (share-price (contract-call? .state get-share-price))
+    (state (contract-call? .state get-fund-claim-state))
     (claim (try! (get-claim claim-id)))
-    (result (try! (process-claim claim-id claim share-price (some is-manager))))
+    (result (try! (process-claim claim-id claim (get share-price state) (some is-manager))))
     (assets (get assets result))
     (shares (get shares result))
   )
+    (asserts! (not (get is-sp-stale-enforced state)) ERR_STALE_SHARE_PRICE)
+
     ;; Transfer assets from reserve to vault and update state
     (try! (contract-call? .reserve transfer sbtc-token assets this-contract))
     (try! (contract-call? .state update-state 
@@ -210,7 +214,7 @@
         { type: "total-assets", amount: assets, is-add: false })
       none
       (some { amount: shares, is-add: false, user: this-contract })))
-    (print { action: "fund-claim", user: contract-caller, data: { claim-id: claim-id, shares: shares, assets: assets, share-price: share-price } })
+    (print { action: "fund-claim", user: contract-caller, data: { claim-id: claim-id, shares: shares, assets: assets, share-price: (get share-price state) } })
     (ok assets)
   )
 )
@@ -218,10 +222,11 @@
 ;; @desc - Optimized batch funding of claims
 (define-public (fund-claim-many (claim-ids (list 1000 uint)))
   (let (
-    (share-price (contract-call? .state get-share-price))
-    (initial-accum { total-shares: u0, total-assets: u0, share-price: share-price })
+    (state (contract-call? .state get-fund-claim-state))
+    (initial-accum { total-shares: u0, total-assets: u0, share-price: (get share-price state) })
   )
     (asserts! (> (len claim-ids) u0) ERR_EMPTY_LIST)
+    (asserts! (not (get is-sp-stale-enforced state)) ERR_STALE_SHARE_PRICE)
     (try! (contract-call? .hq-hbtc check-is-manager contract-caller))
     (match (fold fund-claim-iter claim-ids (ok initial-accum))
       accum

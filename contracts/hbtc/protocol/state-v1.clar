@@ -85,6 +85,7 @@
 (define-data-var express-cooldown uint u3600)                     ;; [3600 seconds] => 1 hour - express redeem cooldown period
 (define-data-var update-window uint u86340)                       ;; [86340 seconds] => 23 hours and 59 minutes - min time between reward updates
 (define-data-var staleness-window uint u50)                       ;; [50 seconds] => ~50 seconds - price staleness check
+(define-data-var staleness-window-sp uint u86400)                 ;; [86400 seconds] => 1 day - max time since last log-reward before share price is stale
 
 ;; Operational States
 (define-data-var vault-active bool true)                          ;; vault enabled/disabled flag
@@ -100,7 +101,7 @@
 (define-data-var pending-fees uint u0)                            ;; [8 decimals] - total pending fees payable to protocol
 (define-data-var pending-rf uint u0)                              ;; [8 decimals] - total pending reserve fund payable to protocol
 (define-data-var claim-id uint u0)                                ;; [counter] - current claim ID
-(define-data-var last-log-ts uint u0)                             ;; [unix timestamp] - last reward log timestamp
+(define-data-var last-log-ts uint (get-current-ts))               ;; [unix timestamp] - last reward log timestamp
 
 ;;-------------------------------------
 ;; Maps
@@ -272,6 +273,15 @@
   (var-get staleness-window)
 )
 
+(define-read-only (get-staleness-window-sp)
+  (var-get staleness-window-sp)
+)
+
+;; @desc - check if share price is stale based on last log-reward timestamp
+(define-read-only (is-sp-stale)
+  (> (get-current-ts) (+ (get-last-log-ts) (get-staleness-window-sp)))
+)
+
 (define-read-only (get-pending-fees)
   (var-get pending-fees)
 )
@@ -380,14 +390,21 @@
   { total-assets: (get-total-assets), net-assets: (get-net-assets), fees: (get-fees), pending-rf: (get-pending-rf), reserve-rate: (get-reserve-rate) }
 )
 
-;; @desc - Batch getter for deposit operation - returns all state needed for deposit validation
+;; @desc - Batch getter for deposit operation 
+;; @note - Emergency: Deposits are already blocked by check-is-deposit-enabled during emergency
 (define-read-only (get-deposit-state (assets-in uint))
-  { shares: (convert-to-shares assets-in), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-deposit: (get-min-deposit) }
+  { shares: (convert-to-shares assets-in), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-deposit: (get-min-deposit), is-sp-stale: (is-sp-stale) }
 )
 
 ;; @desc - Batch getter for redeem operation - returns all data needed
 (define-read-only (get-redeem-state (user principal) (is-express bool))
   { share-price: (get-share-price), exit-fee: (get-custom-exit-fee user is-express), cooldown: (get-custom-cooldown user is-express), min-redeem: (get-min-redeem) }
+)
+
+;; @desc - Batch getter for fund-claim operations
+;; @note - Emergency: is-sp-stale-enforced bypasses staleness during emergency to allow fund-claim
+(define-read-only (get-fund-claim-state)
+  { share-price: (get-share-price), is-sp-stale: (is-sp-stale), is-sp-stale-enforced: (and (is-sp-stale) (not (contract-call? .hq-hbtc get-emergency-active))) }
 )
 
 ;;-------------------------------------
@@ -812,6 +829,7 @@
 (define-public (request-update-window-update (new-value uint))
   (begin
     (asserts! (>= new-value (get update-window min)) ERR_BELOW_MIN)
+    (asserts! (<= new-value (get-staleness-window-sp)) ERR_ABOVE_MAX)
     (request-var-update UPDATE_WINDOW new-value)
   )
 )
@@ -1070,6 +1088,15 @@
     (asserts! (<= new-staleness-window (get staleness-window max) ) ERR_ABOVE_MAX)
     (print { action: "set-staleness-window", user: contract-caller, data: { old: (get-staleness-window), new: new-staleness-window } })
     (ok (var-set staleness-window new-staleness-window))
+  )
+)
+
+(define-public (set-staleness-window-sp (new-staleness-window-sp uint))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (asserts! (>= new-staleness-window-sp (get-update-window)) ERR_BELOW_MIN)
+    (print { action: "set-staleness-window-sp", user: contract-caller, data: { old: (get-staleness-window-sp), new: new-staleness-window-sp } })
+    (ok (var-set staleness-window-sp new-staleness-window-sp))
   )
 )
 
