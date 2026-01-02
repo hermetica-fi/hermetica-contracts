@@ -279,7 +279,7 @@
 
 ;; @desc - check if share price is stale based on last log-reward timestamp
 (define-read-only (is-sp-stale)
-  (> (get-current-ts) (+ (get-last-log-ts) (get-staleness-window-sp)))
+  (>= (get-current-ts) (+ (get-last-log-ts) (get-staleness-window-sp)))
 )
 
 (define-read-only (get-pending-fees)
