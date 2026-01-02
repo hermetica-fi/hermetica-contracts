@@ -44,7 +44,7 @@
 (define-constant PROTOCOL 0x07)
 (define-constant EMERGENCY 0x08)
 
-(define-constant EMERGENCY_SENTINEL current-contract)
+(define-constant EMERGENCY_SENTINEL (as-contract tx-sender))
 
 ;;-------------------------------------
 ;; Variables
