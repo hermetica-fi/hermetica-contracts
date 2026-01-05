@@ -1164,7 +1164,7 @@
 
 (define-public (set-reward-active (active bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-reward-active", user: contract-caller, data: { old: (get-reward-active), new: active } })
     (ok (var-set reward-active active))
   ) 
