@@ -28,7 +28,8 @@
 (define-constant ERR_FEE_WINDOW (err u102018))
 (define-constant ERR_INVALID_TYPE (err u102019))
 (define-constant ERR_REWARD_DISABLED (err u102020))
-(define-constant ERR_EMERGENCY_BLOCKED (err u102022))
+(define-constant ERR_DEPOSIT_BLOCKED (err u102022))
+(define-constant ERR_EXPRESS_BLOCKED (err u102023))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
@@ -408,7 +409,7 @@
 ;; @desc - Emergency: NOT bypassed (deposits blocked)
 (define-read-only (check-is-deposit-active)
   (begin
-    (asserts! (not (contract-call? .hq-hbtc get-emergency-active)) ERR_EMERGENCY_BLOCKED)
+    (asserts! (not (contract-call? .hq-hbtc get-emergency-active)) ERR_DEPOSIT_BLOCKED)
     (try! (contract-call? .hq-hbtc check-is-protocol-active))
     (asserts! (var-get vault-active) ERR_VAULT_DISABLED)
     (ok (asserts! (var-get deposit-active) ERR_DEPOSIT_DISABLED))
@@ -430,7 +431,7 @@
 ;; @desc - Emergency: Partially BYPASSED (express blocked on emergency)
 (define-read-only (check-redeem-auth (is-express bool))
   (if (contract-call? .hq-hbtc get-emergency-active)
-    (ok (asserts! (not is-express) ERR_EMERGENCY_BLOCKED))
+    (ok (asserts! (not is-express) ERR_EXPRESS_BLOCKED))
     (begin
       (try! (contract-call? .hq-hbtc check-is-protocol-active))
       (asserts! (var-get vault-active) ERR_VAULT_DISABLED)
@@ -446,7 +447,7 @@
 ;; @desc - Emergency: NOT BYPASSED (express blocked)
 (define-read-only (check-is-express-active)
   (begin
-    (asserts! (not (contract-call? .hq-hbtc get-emergency-active)) ERR_EMERGENCY_BLOCKED)
+    (asserts! (not (contract-call? .hq-hbtc get-emergency-active)) ERR_EXPRESS_BLOCKED)
     (ok (asserts! (var-get express-active) ERR_EXPRESS_DISABLED))
   )
 )
