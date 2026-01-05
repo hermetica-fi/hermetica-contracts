@@ -404,7 +404,9 @@
 ;; @desc - Batch getter for fund-claim operations
 ;; @note - Emergency: is-sp-stale-enforced bypasses staleness during emergency to allow fund-claim
 (define-read-only (get-fund-claim-state)
-  { share-price: (get-share-price), is-sp-stale: (is-sp-stale), is-sp-stale-enforced: (and (is-sp-stale) (not (contract-call? .hq-hbtc get-emergency-active))) }
+  (let ((emergency-active (contract-call? .hq-hbtc get-emergency-active)))
+    { share-price: (get-share-price), is-sp-stale: (if emergency-active false (is-sp-stale)) }
+  )
 )
 
 ;;-------------------------------------

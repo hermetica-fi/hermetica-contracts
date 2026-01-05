@@ -205,7 +205,7 @@
     (assets (get assets result))
     (shares (get shares result))
   )
-    (asserts! (not (get is-sp-stale-enforced state)) ERR_STALE_SHARE_PRICE)
+    (asserts! (not (get is-sp-stale state)) ERR_STALE_SHARE_PRICE)
 
     ;; Transfer assets from reserve to vault and update state
     (try! (contract-call? .reserve transfer sbtc-token assets this-contract))
@@ -226,7 +226,7 @@
     (initial-accum { total-shares: u0, total-assets: u0, share-price: (get share-price state) })
   )
     (asserts! (> (len claim-ids) u0) ERR_EMPTY_LIST)
-    (asserts! (not (get is-sp-stale-enforced state)) ERR_STALE_SHARE_PRICE)
+    (asserts! (not (get is-sp-stale state)) ERR_STALE_SHARE_PRICE)
     (try! (contract-call? .hq-hbtc check-is-manager contract-caller))
     (match (fold fund-claim-iter claim-ids (ok initial-accum))
       accum
