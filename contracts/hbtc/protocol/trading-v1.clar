@@ -147,6 +147,7 @@
 ;;-------------------------------------
 
 ;; @desc - Opens a leveraged position using vault path
+;; @note - Deposits collateral to vault, receives z-tokens, uses z-tokens as collateral. USDh price feed handled through DIA oracle.
 (define-public (zest-deposit-add-open
   (market <zest-market>) (vault <zest-vault>) (staking <staking-trait>)
   (collateral-token <ft>) (borrow-token <ft>)
@@ -156,23 +157,19 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (asserts! (> collateral-amount u0) ERR_INVALID_AMOUNT)
     (asserts! (> borrow-amount u0) ERR_INVALID_AMOUNT)
-    (let (
-      ;; Step 1: Deposit collateral to vault and get z-tokens
-      (z-tokens-received (try! (contract-call? .zest-interface zest-deposit vault collateral-token collateral-amount min-shares))))
-      
-      ;; Step 1b: Add z-tokens as collateral to Zest market
-      (try! (contract-call? .zest-interface zest-collateral-add market vault z-tokens-received price-feed-1 price-feed-2))
+    ;; Step 1: Deposit collateral to vault and add as collateral in one tx
+    (try! (contract-call? .zest-interface zest-supply-collateral-add market vault collateral-token collateral-amount min-shares price-feed-1 price-feed-2))
 
-      ;; Validate that borrow token is the canonical borrow token
-      (asserts! (is-eq (contract-of borrow-token) usdh-token) ERR_INVALID_TOKEN)
-      ;; Borrow asset from Zest v2 market
-      (try! (contract-call? .zest-interface zest-borrow market borrow-token borrow-amount price-feed-1 price-feed-2))
-      ;; Stake the borrowed asset into Hermetica
-      (try! (contract-call? .hermetica-interface hermetica-stake borrow-amount staking))
+    ;; Step 2: Borrow asset and stake it in Hermetica
+    ;; Validate that borrow token is the canonical borrow token
+    (asserts! (is-eq (contract-of borrow-token) usdh-token) ERR_INVALID_TOKEN)
+    ;; Borrow asset from Zest v2 market (no price feed required, already handled in Step 1)
+    (try! (contract-call? .zest-interface zest-borrow market borrow-token borrow-amount none none))
+    ;; Stake the borrowed asset into Hermetica
+    (try! (contract-call? .hermetica-interface hermetica-stake borrow-amount staking))
 
-      (print { action: "zest-deposit-add-open", user: contract-caller, data: { market: market, vault: vault, staking: staking, collateral: { token: collateral-token, amount: collateral-amount }, borrow: { token: borrow-token, amount: borrow-amount } } })
-      (ok true)
-    )
+    (print { action: "zest-deposit-add-open", user: contract-caller, data: { market: market, vault: vault, staking: staking, collateral: { token: collateral-token, amount: collateral-amount }, borrow: { token: borrow-token, amount: borrow-amount } } })
+    (ok true)
   )
 )
 
@@ -191,22 +188,17 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (asserts! (> unstake-amount u0) ERR_INVALID_AMOUNT)
     (asserts! (> collateral-amount u0) ERR_INVALID_AMOUNT)
+    (asserts! (is-eq (contract-of repay-token) usdh-token) ERR_INVALID_TOKEN)
 
-    ;; Step 1: Unstake and repay loan
     (let (
-      ;; Unstake asset from Hermetica (instant withdrawal)
+      ;; Step 1: Unstake asset from Hermetica (instant withdrawal)
       (repay-amount (try! (contract-call? .hermetica-interface hermetica-unstake-and-withdraw unstake-amount staking staking-silo)))
     )
-      ;; Validate that repay token is the canonical borrow token
-      (asserts! (is-eq (contract-of repay-token) usdh-token) ERR_INVALID_TOKEN)
-      ;; Repay loan to Zest v2 market
+      ;; Step 2: Repay loan to Zest v2 market
       (try! (contract-call? .zest-interface zest-repay market repay-token repay-amount price-feed-1 price-feed-2))
 
-      ;; Step 2: Remove z-token collateral
-      (try! (contract-call? .zest-interface zest-collateral-remove market vault collateral-amount none none))
-
-      ;; Step 3: Redeem collateral from vault (burn z-tokens, get actual collateral amount)
-      (try! (contract-call? .zest-interface zest-redeem vault collateral-amount min-collateral-amount))
+      ;; Step 3: Remove z-token collateral and redeem in one tx
+      (try! (contract-call? .zest-interface zest-collateral-remove-redeem market vault collateral-amount min-collateral-amount none none))
 
       ;; Step 4: Optional - Fund claims with collateral now in reserve
       (if (> (len claim-ids) u0)

@@ -173,6 +173,62 @@
   )
 )
 
+;; @desc - Deposits assets to Zest v2 vault and adds as collateral in one tx (Helper wrapper for trading)
+(define-public (zest-supply-collateral-add
+  (market <zest-market>) (vault <zest-vault>)
+  (asset <ft>)
+  (amount uint)
+  (min-shares uint)
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
+    (try! (contract-call? .state check-trading-auth (contract-of market) (some (contract-of vault)) (some (contract-of asset)) none))
+    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+
+    ;; Update Pyth price feed if provided
+    (try! (write-feed price-feed-1))
+    (try! (write-feed price-feed-2))
+
+    ;; Transfer tokens from reserve to this interface
+    (try! (contract-call? .reserve transfer asset amount current-contract))
+    
+    ;; Supply and add collateral to Zest market
+    (let (
+      (received-z-tokens (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? vault deposit amount min-shares current-contract)))))
+      (total-collateral (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-add vault received-z-tokens none)))))
+    )
+      (print { action: "zest-supply-collateral-add", user: contract-caller, data: { market: market, collateral: { token: vault, amount: received-z-tokens, new-total: total-collateral }, underlying: { token: asset, amount: amount } } })
+      (ok total-collateral)
+    )
+  )
+)
+
+;; @desc - Removes zToken collateral and redeems for underlying in one tx (Helper wrapper for trading)
+(define-public (zest-collateral-remove-redeem
+  (market <zest-market>) (vault <zest-vault>)
+  (amount uint)
+  (min-underlying uint)
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
+    (try! (contract-call? .state check-trading-auth (contract-of market) (some (contract-of vault)) (some (contract-of vault)) none))
+    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+
+    ;; Update Pyth price feed if provided
+    (try! (write-feed price-feed-1))
+    (try! (write-feed price-feed-2))
+
+    ;; Remove collateral from Zest market and redeem from vault
+    (let (
+      (remaining-collateral (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-remove vault amount (some current-contract) none)))))
+      (received-underlying (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? vault redeem amount min-underlying reserve)))))
+    )
+      (print { action: "zest-collateral-remove-redeem", user: contract-caller, data: { market: market, collateral: { token: vault, amount: amount, remaining: remaining-collateral }, underlying: { received: received-underlying, min-amount: min-underlying } } })
+      (ok received-underlying)
+    )
+  )
+)
+
 ;;-------------------------------------
 ;; Admin
 ;;-------------------------------------
