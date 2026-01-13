@@ -115,7 +115,14 @@
     ;; Transfer repayment from reserve to this interface
     (try! (contract-call? .reserve transfer asset amount current-contract))
     
-    (let ((repaid-amount (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market repay asset amount (some current-contract)))))))
+    (let (
+      (repaid-amount (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market repay asset amount (some current-contract))))))
+      (leftover (if (< repaid-amount amount) (- amount repaid-amount) u0))
+    )
+      (if (> leftover u0)
+        (try! (contract-call? asset transfer leftover current-contract reserve none))
+        true
+      )
       (print { action: "zest-repay", user: contract-caller, data: { market: market, asset: { token: asset, amount: amount, actual-amount: repaid-amount } } })
       (ok repaid-amount)
     )
