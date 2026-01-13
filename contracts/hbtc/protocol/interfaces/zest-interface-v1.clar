@@ -56,9 +56,8 @@
     (try! (write-feed price-feed-1))
     (try! (write-feed price-feed-2))
     
-    ;; Remove collateral from Zest market and capture remaining amount and transfer tokens back to reserve
-    (let ((remaining (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-remove asset amount (some current-contract) none))))))
-      (try! (contract-call? asset transfer amount current-contract reserve none))
+    ;; Remove collateral from Zest market and capture remaining amount (tokens sent directly to reserve)
+    (let ((remaining (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-remove asset amount (some reserve) none))))))
       (print { action: "zest-collateral-remove", user: contract-caller, data: { market: market, collateral: { token: asset, amount: amount, remaining: remaining } } })
       (ok remaining)
     )
@@ -85,11 +84,8 @@
     (try! (write-feed price-feed-1))
     (try! (write-feed price-feed-2))
     
-    ;; Borrow from Zest market (debt recorded under this interface contract)
-    (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market borrow asset amount (some current-contract) none))))
-    
-    ;; Transfer borrowed tokens to reserve
-    (try! (contract-call? asset transfer amount current-contract reserve none))
+    ;; Borrow from Zest market (debt recorded under this interface contract, tokens sent directly to reserve)
+    (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market borrow asset amount (some reserve) none))))
     
     (print { action: "zest-borrow", user: contract-caller, data: { market: market, asset: { token: asset, amount: amount } } })
     (ok true)
