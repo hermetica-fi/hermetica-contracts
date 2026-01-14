@@ -121,7 +121,10 @@
       (leftover (if (> post-balance pre-balance) (- post-balance pre-balance) u0))
     )
       (if (> leftover u0)
-        (try! (contract-call? minting-asset transfer leftover current-contract reserve none))
+        (try! (as-contract? 
+          ((with-ft (contract-of minting-asset) "*" leftover)) 
+          (try! (contract-call? minting-asset transfer leftover current-contract reserve none))
+        ))
         true
       )
       (try! (contract-call? .usdh-token transfer amount-usdh current-contract reserve none))
@@ -158,7 +161,10 @@
       (new-asset-balance (unwrap-panic (contract-call? redeeming-asset get-balance current-contract)))
       (asset-received (- new-asset-balance initial-asset-balance))
     )
-      (try! (contract-call? redeeming-asset transfer asset-received current-contract reserve none))
+      (try! (as-contract? 
+        ((with-ft (contract-of redeeming-asset) "*" asset-received)) 
+        (try! (contract-call? redeeming-asset transfer asset-received current-contract reserve none))
+      ))
       (print { action: "hermetica-redeem", user: contract-caller, data: { redeeming-asset: redeeming-asset, amount-usdh: amount-usdh, asset-received: asset-received, minting-contract: minting-auto } })
       (ok asset-received)
     )
@@ -175,7 +181,10 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (try! (contract-call? asset transfer amount current-contract reserve none))
+    (try! (as-contract? 
+      ((with-ft (contract-of asset) "*" amount)) 
+      (try! (contract-call? asset transfer amount current-contract reserve none))
+    ))
     (print { action: "sweep", user: contract-caller, data: { asset: asset, amount: amount, sender: current-contract, recipient: reserve } })
     (ok amount)
   )

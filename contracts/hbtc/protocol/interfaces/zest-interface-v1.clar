@@ -183,7 +183,10 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (try! (contract-call? asset transfer amount current-contract reserve none))
+    (try! (as-contract? 
+      ((with-ft (contract-of asset) "*" amount)) 
+      (try! (contract-call? asset transfer amount current-contract reserve none))
+    ))
     (print { action: "sweep", user: contract-caller, data: { sender: current-contract, recipient: reserve, asset: { token: asset, amount: amount } } })
     (ok amount)
   )
