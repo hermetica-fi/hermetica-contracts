@@ -184,7 +184,7 @@
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     (try! (as-contract? 
-      ((with-ft (contract-of asset) "*" amount)) 
+      ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
       (try! (contract-call? asset transfer amount current-contract reserve none))
     ))
     (print { action: "sweep", user: contract-caller, data: { sender: current-contract, recipient: reserve, asset: { token: asset, amount: amount } } })

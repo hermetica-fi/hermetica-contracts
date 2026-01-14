@@ -122,7 +122,7 @@
     )
       (if (> leftover u0)
         (try! (as-contract? 
-          ((with-ft (contract-of minting-asset) "*" leftover)) 
+          ((with-ft (contract-of minting-asset) "*" leftover) (with-stx leftover)) 
           (try! (contract-call? minting-asset transfer leftover current-contract reserve none))
         ))
         true
@@ -162,7 +162,7 @@
       (asset-received (- new-asset-balance initial-asset-balance))
     )
       (try! (as-contract? 
-        ((with-ft (contract-of redeeming-asset) "*" asset-received)) 
+        ((with-ft (contract-of redeeming-asset) "*" asset-received) (with-stx asset-received)) 
         (try! (contract-call? redeeming-asset transfer asset-received current-contract reserve none))
       ))
       (print { action: "hermetica-redeem", user: contract-caller, data: { redeeming-asset: redeeming-asset, amount-usdh: amount-usdh, asset-received: asset-received, minting-contract: minting-auto } })
@@ -182,7 +182,7 @@
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     (try! (as-contract? 
-      ((with-ft (contract-of asset) "*" amount)) 
+      ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
       (try! (contract-call? asset transfer amount current-contract reserve none))
     ))
     (print { action: "sweep", user: contract-caller, data: { asset: asset, amount: amount, sender: current-contract, recipient: reserve } })
