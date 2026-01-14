@@ -194,8 +194,8 @@
     
     ;; Supply and add collateral to Zest market
     (let (
-      (received-z-tokens (try! (as-contract? ((with-ft (contract-of vault) "*" amount) (with-stx amount)) (try! (contract-call? vault deposit amount min-shares current-contract)))))
-      (total-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" amount) (with-stx amount)) (try! (contract-call? market collateral-add vault received-z-tokens none)))))
+      (received-z-tokens (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) (try! (contract-call? vault deposit amount min-shares current-contract)))))
+      (total-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" received-z-tokens) (with-stx received-z-tokens)) (try! (contract-call? market collateral-add vault received-z-tokens none)))))
     )
       (print { action: "zest-supply-collateral-add", user: contract-caller, data: { market: market, collateral: { token: vault, amount: received-z-tokens, new-total: total-collateral }, underlying: { token: asset, amount: amount } } })
       (ok total-collateral)
