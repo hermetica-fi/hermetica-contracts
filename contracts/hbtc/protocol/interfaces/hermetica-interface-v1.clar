@@ -146,7 +146,6 @@
   (slippage-tolerance-input uint)
   (memo (optional (buff 34)))
   (price-feed (optional (buff 8192)))
-  (max-pyth-fee uint)
   (execution-plan {
     pyth-storage-contract: <pyth-storage>,
     pyth-decoder-contract: <pyth-decoder>,
@@ -169,7 +168,7 @@
       (new-asset-balance (unwrap-panic (contract-call? redeeming-asset get-balance current-contract)))
       (asset-received (- new-asset-balance initial-asset-balance))
     )
-      (try! (as-contract? ((with-ft redeeming-asset-contract "*" asset-received) (with-stx (+ asset-received max-pyth-fee)))
+      (try! (as-contract? ((with-ft redeeming-asset-contract "*" asset-received) (with-stx asset-received)) 
         (try! (contract-call? redeeming-asset transfer asset-received current-contract reserve none))
       ))
       (print { action: "hermetica-redeem", user: contract-caller, data: { redeeming-asset: redeeming-asset, amount-usdh: amount-usdh, asset-received: asset-received, minting-contract: minting-auto } })
