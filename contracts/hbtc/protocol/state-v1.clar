@@ -700,7 +700,6 @@
     (is-var-update (and (is-some value) (is-none address)))
     (is-map-update (and (is-none value) (is-some address)))
   )
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (try! (contract-call? .hq-hbtc check-timelock (get ts entry)))
     (asserts! (or is-var-update is-map-update) ERR_INVALID)
     (if is-var-update

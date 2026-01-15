@@ -278,7 +278,6 @@
     (duration (get duration entry))
     (current (get-timelock))
   )
-    (try! (check-is-owner contract-caller))
     (try! (check-timelock (get ts entry)))
     (asserts! (not (is-eq current duration)) ERR_DUPLICATE)
     (print { action: "confirm-new-timelock", user: contract-caller, data: { old: current, new: duration } })
@@ -355,7 +354,6 @@
     (entry (try! (get-update-request type address)))
     (is-add (get is-add entry))
   )
-    (try! (check-is-owner contract-caller))
     (try! (check-timelock (get ts entry)))
     (begin
       (if is-add
