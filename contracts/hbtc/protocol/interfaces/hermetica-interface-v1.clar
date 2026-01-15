@@ -146,6 +146,7 @@
   (slippage-tolerance-input uint)
   (memo (optional (buff 34)))
   (price-feed (optional (buff 8192)))
+  (max-fee-usdh uint)
   (execution-plan {
     pyth-storage-contract: <pyth-storage>,
     pyth-decoder-contract: <pyth-decoder>,
@@ -161,7 +162,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some redeeming-asset-contract) none))    
     (try! (contract-call? .reserve transfer usdh-token amount-usdh current-contract))
-    (try! (as-contract? ((with-ft usdh-token "*" amount-usdh) (with-stx amount-usdh)) 
+    (try! (as-contract? ((with-ft usdh-token "*" amount-usdh) (with-stx (+ amount-usdh max-fee-usdh))) 
       (try! (contract-call? minting-auto redeem redeeming-asset amount-usdh slippage-tolerance memo price-feed execution-plan))
     ))
     (let (
