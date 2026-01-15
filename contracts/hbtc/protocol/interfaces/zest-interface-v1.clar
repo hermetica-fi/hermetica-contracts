@@ -57,7 +57,7 @@
     (try! (write-feed price-feed-2))
     
     ;; Remove collateral from Zest market and capture remaining amount and transfer tokens back to reserve
-    (let ((remaining (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market collateral-remove asset amount (some current-contract) none))))))
+    (let ((remaining (try! (as-contract? () (try! (contract-call? market collateral-remove asset amount (some current-contract) none))))))
       (try! (contract-call? asset transfer amount current-contract reserve none))
       (print { action: "zest-collateral-remove", user: contract-caller, data: { market: market, collateral: { token: asset, amount: amount, remaining: remaining } } })
       (ok remaining)
@@ -86,7 +86,7 @@
     (try! (write-feed price-feed-2))
     
     ;; Borrow from Zest market (debt recorded under this interface contract)
-    (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? market borrow asset amount (some current-contract) none))))
+    (try! (as-contract? () (try! (contract-call? market borrow asset amount (some current-contract) none))))
     
     ;; Transfer borrowed tokens to reserve
     (try! (contract-call? asset transfer amount current-contract reserve none))
@@ -115,7 +115,14 @@
     ;; Transfer repayment from reserve to this interface
     (try! (contract-call? .reserve transfer asset amount current-contract))
     
-    (let ((repaid-amount (try! (as-contract? ((with-ft (contract-of asset) "*" amount)) (try! (contract-call? market repay asset amount (some current-contract)))))))
+    (let (
+      (repaid-amount (try! (as-contract? ((with-ft (contract-of asset) "*" amount)) (try! (contract-call? market repay asset amount (some current-contract))))))
+      (leftover (if (< repaid-amount amount) (- amount repaid-amount) u0))
+    )
+      (if (> leftover u0)
+        (try! (contract-call? asset transfer leftover current-contract reserve none))
+        true
+      )
       (print { action: "zest-repay", user: contract-caller, data: { market: market, asset: { token: asset, amount: amount, actual-amount: repaid-amount } } })
       (ok repaid-amount)
     )
