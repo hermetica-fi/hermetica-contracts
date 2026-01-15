@@ -27,6 +27,7 @@
 (define-constant ERR_EXPRESS_DISABLED (err u102017))
 (define-constant ERR_FEE_WINDOW (err u102018))
 (define-constant ERR_INVALID_TYPE (err u102019))
+(define-constant ERR_INVALID_DECIMALS (err u102020))
 
 (define-constant max {
   reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
@@ -817,16 +818,21 @@
 ;; Asset Request Functions
 ;;-------------------------------------
 
-(define-public (request-asset-add (address principal) (data {
-  price-feed-id: (buff 32),
-  token-base: uint,
-  max-slippage: uint,
-  is-stablecoin: bool
-}))
-  (begin
-    (asserts! (is-none (map-get? assets { address: address })) ERR_DUPLICATE)
-    (asserts! (<= (get max-slippage data) (get-max-slippage)) ERR_ABOVE_MAX)
-    (request-map-update ASSET address true (some data))
+(define-public (request-asset-add (token <ft>) (price-feed-id (buff 32)) (decimals uint) (asset-max-slippage uint) (is-stablecoin bool))
+  (let (
+    (token-contract (contract-of token))
+    (token-decimals (try! (contract-call? token get-decimals)))
+    (token-base (pow u10 token-decimals))
+  )
+    (asserts! (is-none (map-get? assets { address: token-contract })) ERR_DUPLICATE)
+    (asserts! (<= asset-max-slippage (get-max-slippage)) ERR_ABOVE_MAX)
+    (asserts! (is-eq token-decimals decimals) ERR_INVALID_DECIMALS)
+    (request-map-update ASSET token-contract true (some {
+      price-feed-id: price-feed-id,
+      token-base: token-base,
+      max-slippage: asset-max-slippage,
+      is-stablecoin: is-stablecoin
+    }))
   )
 )
 
