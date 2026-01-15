@@ -36,7 +36,9 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of staking) none none none))
     (try! (contract-call? .reserve transfer usdh-token amount current-contract))
-    (try! (as-contract? ((with-ft usdh-token "*" amount)) (try! (contract-call? staking stake amount none))))
+    (try! (as-contract? ((with-ft usdh-token "*" amount)) 
+      (try! (contract-call? staking stake amount none))
+    ))
     (try! (contract-call? .susdh-token transfer susdh-amount current-contract reserve none))
     (print { action: "hermetica-stake", user: contract-caller, data: { usdh-amount: amount, susdh-amount: susdh-amount, ratio: ratio, staking: staking } })
     (ok susdh-amount)
@@ -100,6 +102,7 @@
   (slippage-tolerance-input uint)
   (memo (optional (buff 34)))
   (price-feed (optional (buff 8192)))
+  (max-pyth-fee uint)
   (execution-plan {
     pyth-storage-contract: <pyth-storage>,
     pyth-decoder-contract: <pyth-decoder>,
@@ -107,22 +110,26 @@
   })
 )
   (let (
-    (minting-asset-data (contract-call? .state get-asset (contract-of minting-asset)))
+    (minting-asset-contract (contract-of minting-asset))
+    (minting-asset-data (contract-call? .state get-asset minting-asset-contract))
     (max-slippage (get max-slippage minting-asset-data))
     (slippage-tolerance (if (< max-slippage slippage-tolerance-input) max-slippage slippage-tolerance-input))
     (pre-balance (unwrap-panic (contract-call? minting-asset get-balance current-contract)))
   )
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
-    (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some (contract-of minting-asset)) none))
+    (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some minting-asset-contract) none))
     (try! (contract-call? .reserve transfer minting-asset amount-asset current-contract))
-    (try! (as-contract? ((with-all-assets-unsafe)) (try! (contract-call? minting-auto mint minting-asset amount-usdh slippage-tolerance memo price-feed execution-plan))))
+    (try! (as-contract? 
+      ((with-ft (contract-of minting-asset) "*" amount-asset) (with-stx (+ amount-asset max-pyth-fee)))
+      (try! (contract-call? minting-auto mint minting-asset amount-usdh slippage-tolerance memo price-feed execution-plan))
+    ))
     (let (
       (post-balance (unwrap-panic (contract-call? minting-asset get-balance current-contract)))
       (leftover (if (> post-balance pre-balance) (- post-balance pre-balance) u0))
     )
       (if (> leftover u0)
         (try! (as-contract? 
-          ((with-ft (contract-of minting-asset) "*" leftover) (with-stx leftover)) 
+          ((with-ft minting-asset-contract "*" leftover) (with-stx leftover)) 
           (try! (contract-call? minting-asset transfer leftover current-contract reserve none))
         ))
         true
@@ -142,27 +149,31 @@
   (slippage-tolerance-input uint)
   (memo (optional (buff 34)))
   (price-feed (optional (buff 8192)))
+  (max-fee-usdh uint)
   (execution-plan {
     pyth-storage-contract: <pyth-storage>,
     pyth-decoder-contract: <pyth-decoder>,
     wormhole-core-contract: <wormhole-core>
   }))
   (let (
-    (redeeming-asset-data (contract-call? .state get-asset (contract-of redeeming-asset)))
+    (redeeming-asset-contract (contract-of redeeming-asset))
+    (redeeming-asset-data (contract-call? .state get-asset redeeming-asset-contract))
     (max-slippage (get max-slippage redeeming-asset-data))
     (slippage-tolerance (if (< max-slippage slippage-tolerance-input) max-slippage slippage-tolerance-input))
     (initial-asset-balance (unwrap-panic (contract-call? redeeming-asset get-balance current-contract)))
   )
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
-    (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some (contract-of redeeming-asset)) none))    
+    (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some redeeming-asset-contract) none))    
     (try! (contract-call? .reserve transfer usdh-token amount-usdh current-contract))
-    (try! (contract-call? minting-auto redeem redeeming-asset amount-usdh slippage-tolerance memo price-feed execution-plan))
+    (try! (as-contract? ((with-ft usdh-token "*" amount-usdh) (with-stx (+ amount-usdh max-fee-usdh))) 
+      (try! (contract-call? minting-auto redeem redeeming-asset amount-usdh slippage-tolerance memo price-feed execution-plan))
+    ))
     (let (
       (new-asset-balance (unwrap-panic (contract-call? redeeming-asset get-balance current-contract)))
       (asset-received (- new-asset-balance initial-asset-balance))
     )
       (try! (as-contract? 
-        ((with-ft (contract-of redeeming-asset) "*" asset-received) (with-stx asset-received)) 
+        ((with-ft redeeming-asset-contract "*" asset-received) (with-stx asset-received)) 
         (try! (contract-call? redeeming-asset transfer asset-received current-contract reserve none))
       ))
       (print { action: "hermetica-redeem", user: contract-caller, data: { redeeming-asset: redeeming-asset, amount-usdh: amount-usdh, asset-received: asset-received, minting-contract: minting-auto } })
