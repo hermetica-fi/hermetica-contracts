@@ -301,9 +301,14 @@
 )
 
 (define-read-only (get-effective-express-limit)
-  (if (>= (get-current-ts) (+ (get-last-express-ts) (get-express-window)))
-    (/ (* (get-net-assets) (get-express-limit)) bps-base)
-    (var-get current-express-limit)
+  (let (
+    (reset-ts (+ (get-last-express-ts) (get-express-window)))
+    (limit 
+      (if (>= stacks-block-time reset-ts)
+        (/ (* (get-net-assets) (get-express-limit)) bps-base)
+        (var-get current-express-limit)))
+  )
+    { assets: limit, shares: (convert-to-shares limit), reset-ts: reset-ts }
   )
 )
 
