@@ -58,13 +58,8 @@
     (try! (write-feed price-feed-1))
     (try! (write-feed price-feed-2))
     
-    ;; Remove collateral from Zest market and capture remaining amount and transfer tokens back to reserve
-    (let ((remaining (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
-      (try! (contract-call? market collateral-remove asset amount (some current-contract) none))
-    ))))
-      (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
-        (try! (contract-call? asset transfer amount current-contract reserve none))
-      ))
+    ;; Remove collateral from Zest market and capture remaining amount (tokens sent directly to reserve)
+    (let ((remaining (try! (as-contract? () (try! (contract-call? market collateral-remove asset amount (some reserve) none))))))
       (print { action: "zest-collateral-remove", user: contract-caller, data: { market: market, collateral: { token: asset, amount: amount, remaining: remaining } } })
       (ok remaining)
     )
@@ -91,15 +86,8 @@
     (try! (write-feed price-feed-1))
     (try! (write-feed price-feed-2))
     
-    ;; Borrow from Zest market (debt recorded under this interface contract)
-    (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
-      (try! (contract-call? market borrow asset amount (some current-contract) none))
-    ))
-    
-    ;; Transfer borrowed tokens to reserve
-    (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
-      (try! (contract-call? asset transfer amount current-contract reserve none))
-    ))
+    ;; Borrow from Zest market (debt recorded under this interface contract, tokens sent directly to reserve)
+    (try! (as-contract? () (try! (contract-call? market borrow asset amount (some reserve) none))))
     
     (print { action: "zest-borrow", user: contract-caller, data: { market: market, asset: { token: asset, amount: amount } } })
     (ok true)
@@ -125,9 +113,14 @@
     ;; Transfer repayment from reserve to this interface
     (try! (contract-call? .reserve transfer asset amount current-contract))
     
-    (let ((repaid-amount (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
-      (try! (contract-call? market repay asset amount (some current-contract)))
-    ))))
+    (let (
+      (repaid-amount (try! (as-contract? ((with-ft (contract-of asset) "*" amount)) (try! (contract-call? market repay asset amount (some current-contract))))))
+      (leftover (if (< repaid-amount amount) (- amount repaid-amount) u0))
+    )
+      (if (> leftover u0)
+        (try! (contract-call? asset transfer leftover current-contract reserve none))
+        true
+      )
       (print { action: "zest-repay", user: contract-caller, data: { market: market, asset: { token: asset, amount: amount, actual-amount: repaid-amount } } })
       (ok repaid-amount)
     )
@@ -185,6 +178,62 @@
     )
       (print { action: "zest-redeem", user: contract-caller, data: { vault: vault, shares: shares, collateral: { min-amount: min-amount, received: received } } })
       (ok received)
+    )
+  )
+)
+
+;; @desc - Deposits assets to Zest v2 vault and adds as collateral in one tx (Helper wrapper for trading)
+(define-public (zest-supply-collateral-add
+  (market <zest-market>) (vault <zest-vault>)
+  (asset <ft>)
+  (amount uint)
+  (min-shares uint)
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
+    (try! (contract-call? .state check-trading-auth (contract-of market) (some (contract-of vault)) (some (contract-of asset)) none))
+    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+
+    ;; Update Pyth price feed if provided
+    (try! (write-feed price-feed-1))
+    (try! (write-feed price-feed-2))
+
+    ;; Transfer tokens from reserve to this interface
+    (try! (contract-call? .reserve transfer asset amount current-contract))
+    
+    ;; Supply and add collateral to Zest market
+    (let (
+      (received-z-tokens (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) (try! (contract-call? vault deposit amount min-shares current-contract)))))
+      (total-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" received-z-tokens) (with-stx received-z-tokens)) (try! (contract-call? market collateral-add vault received-z-tokens none)))))
+    )
+      (print { action: "zest-supply-collateral-add", user: contract-caller, data: { market: market, collateral: { token: vault, amount: received-z-tokens, new-total: total-collateral }, underlying: { token: asset, amount: amount } } })
+      (ok total-collateral)
+    )
+  )
+)
+
+;; @desc - Removes zToken collateral and redeems for underlying in one tx (Helper wrapper for trading)
+(define-public (zest-collateral-remove-redeem
+  (market <zest-market>) (vault <zest-vault>)
+  (amount uint)
+  (min-underlying uint)
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
+    (try! (contract-call? .state check-trading-auth (contract-of market) (some (contract-of vault)) (some (contract-of vault)) none))
+    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+
+    ;; Update Pyth price feed if provided
+    (try! (write-feed price-feed-1))
+    (try! (write-feed price-feed-2))
+
+    ;; Remove collateral from Zest market and redeem from vault
+    (let (
+      (remaining-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" amount) (with-stx amount)) (try! (contract-call? market collateral-remove vault amount (some current-contract) none)))))
+      (received-underlying (try! (as-contract? ((with-ft (contract-of vault) "*" amount) (with-stx amount)) (try! (contract-call? vault redeem amount min-underlying reserve)))))
+    )
+      (print { action: "zest-collateral-remove-redeem", user: contract-caller, data: { market: market, collateral: { token: vault, amount: amount, remaining: remaining-collateral }, underlying: { received: received-underlying, min-amount: min-underlying } } })
+      (ok received-underlying)
     )
   )
 )
