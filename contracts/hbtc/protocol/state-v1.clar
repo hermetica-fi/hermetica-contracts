@@ -821,6 +821,10 @@
   (begin
     (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
     (asserts! (>= new-value (get-express-cooldown)) ERR_BELOW_MIN)
+    (match (get-update-request-var EXPRESS_COOLDOWN)
+      entry (asserts! (>= new-value (unwrap-panic (get value entry))) ERR_BELOW_MIN)
+      no-entry true
+    )
     (request-var-update COOLDOWN new-value)
   )
 )
@@ -829,6 +833,11 @@
   (begin
     (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
     (asserts! (<= new-value (get-cooldown)) ERR_INVALID)
+    ;; Also check against pending cooldown if exists
+    (match (get-update-request-var COOLDOWN)
+      entry (asserts! (<= new-value (unwrap-panic (get value entry))) ERR_INVALID)
+      no-entry true
+    )
     (request-var-update EXPRESS_COOLDOWN new-value)
   )
 )
