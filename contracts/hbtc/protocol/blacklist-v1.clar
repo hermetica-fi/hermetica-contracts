@@ -13,8 +13,8 @@
 ;; Variables
 ;;-------------------------------------
 
-(define-data-var soft-blacklist-active bool true)
-(define-data-var full-blacklist-active bool false)
+(define-data-var soft-blacklist-enabled bool true)
+(define-data-var full-blacklist-enabled bool false)
 
 ;;-------------------------------------
 ;; Maps
@@ -43,12 +43,12 @@
 ;; Getters
 ;;-------------------------------------
 
-(define-read-only (get-soft-blacklist-active)
-  (var-get soft-blacklist-active)
+(define-read-only (get-soft-blacklist-enabled)
+  (var-get soft-blacklist-enabled)
 )
 
-(define-read-only (get-full-blacklist-active)
-  (var-get full-blacklist-active)
+(define-read-only (get-full-blacklist-enabled)
+  (var-get full-blacklist-enabled)
 )
 
 (define-read-only (get-blacklister (address principal))
@@ -87,21 +87,21 @@
 )
 
 (define-read-only (check-is-not-soft (address principal))
-  (ok (if (get-soft-blacklist-active)
+  (ok (if (get-soft-blacklist-enabled)
     (asserts! (not (get-soft-blacklist address)) ERR_SOFT_BLACKLISTED)
     (try! (check-is-not-full address))
   ))
 )
 
 (define-read-only (check-is-not-full (address principal))
-  (ok (if (get-full-blacklist-active)
+  (ok (if (get-full-blacklist-enabled)
     (asserts! (not (get-full-blacklist address)) ERR_FULLY_BLACKLISTED)
     true
   ))
 )
 
 (define-read-only (check-is-not-full-two (address1 principal) (address2 principal))
-  (ok (if (get-full-blacklist-active)
+  (ok (if (get-full-blacklist-enabled)
     (asserts! (and (not (get-full-blacklist address1)) (not (get-full-blacklist address2))) ERR_FULLY_BLACKLISTED)
     true
   ))
@@ -157,18 +157,18 @@
   )
 )
 
-(define-public (set-soft-blacklist-active (active bool))
+(define-public (set-soft-blacklist-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (print { action: "set-soft-blacklist-active", user: contract-caller, data: { old-value: (get-soft-blacklist-active), new-value: active } })
-    (ok (var-set soft-blacklist-active active))
+    (print { action: "set-soft-blacklist-enabled", user: contract-caller, data: { old-value: (get-soft-blacklist-enabled), new-value: enabled } })
+    (ok (var-set soft-blacklist-enabled enabled))
   )
 )
 
-(define-public (set-full-blacklist-active (active bool))
+(define-public (set-full-blacklist-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (print { action: "set-full-blacklist-active", user: contract-caller, data: { old-value: (get-full-blacklist-active), new-value: active } })
-    (ok (var-set full-blacklist-active active))
+    (print { action: "set-full-blacklist-enabled", user: contract-caller, data: { old-value: (get-full-blacklist-enabled), new-value: enabled } })
+    (ok (var-set full-blacklist-enabled enabled))
   )
 )

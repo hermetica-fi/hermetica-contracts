@@ -16,7 +16,7 @@
     (balance (try! (contract-call? asset get-balance current-contract)))
     (fee-address (contract-call? .state get-fee-address))
   )
-    (try! (contract-call? .state check-is-transfer-active))
+    (try! (contract-call? .state check-is-transfer-enabled))
     (try! (contract-call? .state check-is-asset asset-contract))
     (asserts! (> balance u0) ERR_INSUFFICIENT_BALANCE)
     (print { action: "withdraw", user: contract-caller, data: { asset: asset, amount: balance, recipient: fee-address, sender: current-contract, balance: balance }})

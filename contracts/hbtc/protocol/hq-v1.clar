@@ -48,7 +48,7 @@
 ;; Variables
 ;;-------------------------------------
 
-(define-data-var protocol-active bool true)
+(define-data-var protocol-enabled bool true)
 
 (define-data-var timelock uint u86400)
 (define-data-var next-timelock
@@ -111,8 +111,8 @@
   (var-get next-timelock)
 )
 
-(define-read-only (get-protocol-active)
-  (var-get protocol-active)
+(define-read-only (get-protocol-enabled)
+  (var-get protocol-enabled)
 )
 
 (define-read-only (get-owner)
@@ -177,8 +177,8 @@
   (ok (asserts! (is-standard address) ERR_NOT_STANDARD))
 )
 
-(define-read-only (check-is-protocol-active)
-  (ok (asserts! (get-protocol-active) ERR_PROTOCOL_DISABLED))
+(define-read-only (check-is-protocol-enabled)
+  (ok (asserts! (get-protocol-enabled) ERR_PROTOCOL_DISABLED))
 )
 
 (define-read-only (check-is-owner (address principal))
@@ -224,19 +224,19 @@
 ;; Setters
 ;;-------------------------------------
 
-(define-public (set-protocol-active (active bool))
+(define-public (set-protocol-enabled (enabled bool))
   (begin
     (try! (check-is-owner contract-caller))
-    (print { action: "set-protocol-active", user: contract-caller, data: { old: (get-protocol-active), new: active } })
-    (ok (var-set protocol-active active))
+    (print { action: "set-protocol-enabled", user: contract-caller, data: { old: (get-protocol-enabled), new: enabled } })
+    (ok (var-set protocol-enabled enabled))
   )
 )
 
 (define-public (disable-protocol)
   (begin
     (try! (check-is-guardian contract-caller))
-    (print { action: "disable-protocol", user: contract-caller, data: { old: (get-protocol-active), new: false } })
-    (ok (var-set protocol-active false))
+    (print { action: "disable-protocol", user: contract-caller, data: { old: (get-protocol-enabled), new: false } })
+    (ok (var-set protocol-enabled false))
   )
 )
 

@@ -72,7 +72,7 @@
     (shares (get shares state))
   )
     (try! (contract-call? .blacklist check-is-not-soft contract-caller))
-    (try! (contract-call? .state check-is-deposit-active))
+    (try! (contract-call? .state check-is-deposit-enabled))
     (asserts! (<= (+ (get net-assets state) assets) (get deposit-cap state)) ERR_DEPOSIT_CAP_EXCEEDED)
     (asserts! (>= assets (get min-deposit state)) ERR_BELOW_MIN)
 
@@ -131,7 +131,7 @@
 ;; @desc - executes a claim for each claim-id in the list
 (define-public (redeem-many (entries (list 1000 uint)))
   (begin
-    (try! (contract-call? .state check-is-redeem-active))
+    (try! (contract-call? .state check-is-redeem-enabled))
     (ok (map redeem-internal entries))
   )
 )
@@ -139,7 +139,7 @@
 ;; @desc - transfers asset to user after cooldown window has passed (claim must be funded)
 (define-public (redeem (claim-id uint))
   (begin
-    (try! (contract-call? .state check-is-redeem-active))
+    (try! (contract-call? .state check-is-redeem-enabled))
     (redeem-internal claim-id)
   )
 )
