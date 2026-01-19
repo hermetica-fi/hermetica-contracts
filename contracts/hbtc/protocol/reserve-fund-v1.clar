@@ -6,8 +6,6 @@
 
 (define-constant ERR_INSUFFICIENT_BALANCE (err u106001))
 
-(define-constant this-contract (as-contract tx-sender))
-
 ;;-------------------------------------
 ;; Transfer
 ;;-------------------------------------
@@ -15,12 +13,14 @@
 ;; @desc - transfers asset from reserve fund to recipient
 (define-public (transfer (asset <ft>) (amount uint) (recipient principal) (memo (optional (buff 34))))
   (let (
-    (balance (try! (contract-call? asset get-balance this-contract)))
+    (balance (try! (contract-call? asset get-balance current-contract)))
   )
     (try! (contract-call? .hq-hbtc check-is-protocol contract-caller))
     (try! (contract-call? .state check-transfer-auth (contract-of asset)))
     (asserts! (>= balance amount) ERR_INSUFFICIENT_BALANCE)
-    (print { action: "transfer", user: contract-caller, data: { asset: asset, amount: amount, recipient: recipient, sender: this-contract, balance: balance }})
-    (ok (try! (as-contract (contract-call? asset transfer amount tx-sender recipient memo))))
+    (print { action: "transfer", user: contract-caller, data: { asset: asset, amount: amount, recipient: recipient, sender: current-contract, balance: balance }})
+    (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
+      (try! (contract-call? asset transfer amount current-contract recipient memo))
+    )
   )
 )

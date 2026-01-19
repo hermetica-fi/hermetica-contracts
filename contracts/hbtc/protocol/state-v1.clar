@@ -31,19 +31,12 @@
 (define-constant ERR_REWARD_DISABLED (err u102021))
 
 (define-constant max {
-  reward: u20,                                                    ;; [20 bps] => 0.20% - max asset reward/loss per log-reward call
-  deviation: u20,                                                 ;; [20 bps] => 0.20% - max share price deviation per update
   mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
   perf-fee: u2000,                                                ;; [2000 bps] => 20.00% - max performance fee on profits
   exit-fee: u100,                                                 ;; [100 bps] => 1.00% - max exit fee on redeems
   reserve-rate: u5000,                                            ;; [5000 bps] => 50.00% - max reserve fund allocation rate
   express-fee: u200,                                              ;; [200 bps] => 2.00% - max express redeem fee
   cooldown: u2592000,                                             ;; [2592000 seconds] => 30 days - redeem cooldown period
-  staleness-window: u300,                                         ;; [300 seconds] => 5 min - price staleness check
-})
-
-(define-constant min {
-  update-window: u3600,                                           ;; [3600 seconds] => 1 hour - min time between reward updates
 })
 
 (define-constant bps-base u10000)                                 ;; 10^4 = 10000 (basis points base)
@@ -469,7 +462,7 @@
 )
 
 (define-read-only (check-update-window)
-  (ok (asserts! (>= (get-current-ts) (+ (get-last-log-ts) (get-update-window))) ERR_WINDOW_CLOSED))
+  (ok (asserts! (>= stacks-block-time (+ (get-last-log-ts) (get-update-window))) ERR_WINDOW_CLOSED))
 )
 
 (define-read-only (check-max-reward (amount uint))
@@ -573,11 +566,9 @@
 )
 
 (define-private (update-last-log-ts)
-  (let (
-    (current (get-current-ts))
-  )
-    (print { action: "update-last-log-ts", data: { old: (get-last-log-ts), new: current } })
-    (var-set last-log-ts current)
+  (begin
+    (print { action: "update-last-log-ts", data: { old: (get-last-log-ts), new: stacks-block-time } })
+    (var-set last-log-ts stacks-block-time)
   )
 )
 
@@ -1029,7 +1020,7 @@
     (asserts! (<= express-fee (get express-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= exit-fee express-fee) ERR_INVALID)
     (if (or mgmt-changed perf-changed)
-      (asserts! (or (<= (get-current-ts) (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+      (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
       true)
     (print { action: "set-fees", user: contract-caller, data: { old: current-fees, new: new-fees } })
     (ok (var-set fees new-fees))
@@ -1127,7 +1118,6 @@
 (define-public (set-staleness-window (new-staleness-window uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= new-staleness-window (get staleness-window max) ) ERR_ABOVE_MAX)
     (print { action: "set-staleness-window", user: contract-caller, data: { old: (get-staleness-window), new: new-staleness-window } })
     (ok (var-set staleness-window new-staleness-window))
   )

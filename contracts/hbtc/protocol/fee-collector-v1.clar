@@ -6,8 +6,6 @@
 
 (define-constant ERR_INSUFFICIENT_BALANCE (err u107001))
 
-(define-constant this-contract (as-contract tx-sender))
-
 ;;-------------------------------------
 ;; Withdrawal
 ;;-------------------------------------
@@ -15,13 +13,15 @@
 (define-public (withdraw (asset <ft>))
   (let (
     (asset-contract (contract-of asset))
-    (balance (try! (contract-call? asset get-balance this-contract)))
+    (balance (try! (contract-call? asset get-balance current-contract)))
     (fee-address (contract-call? .state get-fee-address))
   )
     (try! (contract-call? .state check-is-transfer-active))
     (try! (contract-call? .state check-is-asset asset-contract))
     (asserts! (> balance u0) ERR_INSUFFICIENT_BALANCE)
-    (print { action: "withdraw", user: contract-caller, data: { asset: asset, amount: balance, recipient: fee-address, sender: this-contract, balance: balance }})
-    (ok (try! (as-contract (contract-call? asset transfer balance tx-sender fee-address none))))
+    (print { action: "withdraw", user: contract-caller, data: { asset: asset, amount: balance, recipient: fee-address, sender: current-contract, balance: balance }})
+    (as-contract? ((with-ft asset-contract "*" balance) (with-stx balance)) 
+      (try! (contract-call? asset transfer balance current-contract fee-address none))
+    )
   )
 )

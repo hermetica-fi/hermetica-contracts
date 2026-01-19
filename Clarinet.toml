@@ -152,38 +152,38 @@ epoch = 3.2
 
 [contracts.blacklist]
 path = 'contracts/hbtc/protocol/blacklist-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.controller-hbtc]
 path = 'contracts/hbtc/protocol/controller-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.fee-collector]
 path = 'contracts/hbtc/protocol/fee-collector-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.hq-hbtc]
 path = 'contracts/hbtc/protocol/hq-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.reserve-fund]
 path = 'contracts/hbtc/protocol/reserve-fund-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.reserve]
 path = 'contracts/hbtc/protocol/reserve-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.state]
 path = 'contracts/hbtc/protocol/state-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.trading]
 path = 'contracts/hbtc/protocol/trading-v1.clar'
@@ -192,15 +192,15 @@ epoch = 3.3
 
 [contracts.vault]
 path = 'contracts/hbtc/protocol/vault-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 # hbtc interfaces
 
 [contracts.hermetica-interface]
 path = 'contracts/hbtc/protocol/interfaces/hermetica-interface-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.zest-interface]
 path = 'contracts/hbtc/protocol/interfaces/zest-interface-v1.clar'
@@ -209,37 +209,37 @@ epoch = 3.3
 
 [contracts.granite-interface]
 path = 'contracts/hbtc/protocol/interfaces/granite-interface-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 # hbtc tokens
 
 [contracts.hbtc-token]
 path = 'contracts/hbtc/tokens/hbtc-token.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 # hbtc traits
 
 [contracts.vault-trait-v1]
 path = 'contracts/hbtc/traits/vault-trait-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.zest-market-trait-v1]
 path = 'contracts/hbtc/traits/zest-market-trait-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.zest-vault-trait-v1]
 path = 'contracts/hbtc/traits/zest-vault-trait-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.granite-borrower-trait-v1]
 path = 'contracts/hbtc/traits/granite-borrower-trait-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [repl.analysis]
 passes = ['check_checker']

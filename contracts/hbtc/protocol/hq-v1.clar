@@ -70,7 +70,7 @@
   }
   {
     address: tx-sender,
-    ts: (+ (get-current-ts) (get-timelock))
+    ts: (+ stacks-block-time (get-timelock))
   }
 )
 
@@ -97,14 +97,6 @@
     ts: uint,
     is-add: bool
   }
-)
-
-;;-------------------------------------
-;; Helper
-;;-------------------------------------
-
-(define-private (get-current-ts)
-  (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1)))
 )
 
 ;;-------------------------------------
@@ -178,7 +170,7 @@
 ;;-------------------------------------
 
 (define-read-only (check-timelock (ts uint))
-  (ok (asserts! (>= (get-current-ts) ts) ERR_TIMELOCK))
+  (ok (asserts! (>= stacks-block-time ts) ERR_TIMELOCK))
 )
 
 (define-read-only (check-is-standard (address principal))
@@ -336,7 +328,7 @@
 
 (define-private (request-update (type (buff 1)) (address principal) (is-add bool))
   (let (
-    (activation-ts (+ (get-current-ts) (get-timelock)))
+    (activation-ts (+ stacks-block-time (get-timelock)))
     (new-entry { ts: activation-ts, is-add: is-add })
     (is-active (get active (get-role address type)))
   )
