@@ -24,6 +24,7 @@
 (define-constant ERR_NO_ENTRY (err u101015))
 (define-constant ERR_DUPLICATE (err u101016))
 (define-constant ERR_INVALID_ROLE (err u101017))
+(define-constant ERR_PENDING_REQUEST (err u101018))
 
 
 (define-constant max {
@@ -249,13 +250,17 @@
 
 (define-public (request-new-timelock (duration uint))
   (let (
-    (activation-ts (+ (get-current-ts) (get-timelock)))
+    (current (get-timelock))
+    (next (get-next-timelock))
+    (activation-ts (+ stacks-block-time current))
     (new-entry { duration: duration, ts: activation-ts })
   )
     (try! (check-is-owner contract-caller))
+    (asserts! (is-eq current (get duration next)) ERR_PENDING_REQUEST)
+    (asserts! (not (is-eq duration current)) ERR_DUPLICATE)
     (asserts! (>= duration (get timelock min)) ERR_BELOW_MIN)
     (asserts! (<= duration (get timelock max)) ERR_ABOVE_MAX)
-    (print { action: "request-new-timelock", user: contract-caller, data: { old: (get-timelock), new: duration } })
+    (print { action: "request-new-timelock", user: contract-caller, data: { old: next, new: new-entry } })
     (ok (var-set next-timelock new-entry))
   )
 )
@@ -288,13 +293,16 @@
 
 (define-public (request-new-owner (address principal))
   (let (
-    (activation-ts (+ (get-current-ts) (get-timelock)))
+    (current (get-owner))
+    (next (get-next-owner))
+    (activation-ts (+ stacks-block-time (get-timelock)))
     (new-entry { address: address, ts: activation-ts })
   )
     (try! (check-is-owner contract-caller))
     (try! (check-is-standard address))
-    (asserts! (not (is-eq address (get-owner))) ERR_DUPLICATE)
-    (print { action: "request-new-owner", user: contract-caller, data: { old: (get-next-owner), new: new-entry } })
+    (asserts! (is-eq current (get address next)) ERR_PENDING_REQUEST)
+    (asserts! (not (is-eq address current)) ERR_DUPLICATE)
+    (print { action: "request-new-owner", user: contract-caller, data: { old: next, new: new-entry } })
     (ok (var-set next-owner new-entry))
   )
 )
