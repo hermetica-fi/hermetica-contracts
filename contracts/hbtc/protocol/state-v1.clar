@@ -91,6 +91,7 @@
 (define-data-var redeem-active bool true)                         ;; redeems enabled/disabled flag
 (define-data-var trading-active bool true)                        ;; trading enabled/disabled flag
 (define-data-var express-active bool false)                       ;; express redeems enabled/disabled flag
+(define-data-var reward-enabled bool true)                        ;; reward enabled/disabled flag
 
 ;; Accounting Variables
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
@@ -341,6 +342,10 @@
   (var-get express-active)
 )
 
+(define-read-only (get-reward-enabled)
+  (var-get reward-enabled)
+)
+
 (define-read-only (get-asset (address principal))
   (let (
     (asset-entry (default-to 
@@ -451,7 +456,14 @@
     (try! (check-is-vault-active))
     (ok (asserts! (get-trading-active) ERR_TRADING_DISABLED))
   )
-) 
+)
+
+(define-read-only (check-is-reward-enabled)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-protocol-active))
+    (ok (asserts! (var-get reward-enabled) ERR_REWARD_DISABLED))
+  )
+)
 
 (define-read-only (check-is-asset (address principal))
   (ok (asserts! (get active (get-asset address)) ERR_NOT_ASSET))
@@ -1211,6 +1223,23 @@
     (ok (var-set express-active active))
   )
 )
+
+(define-public (set-reward-enabled (enabled bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (print { action: "set-reward-enabled", user: contract-caller, data: { old: (get-reward-enabled), new: enabled } })
+    (ok (var-set reward-enabled enabled))
+  )
+)
+
+(define-public (disable-reward)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
+    (print { action: "disable-reward", user: contract-caller, data: { old: (get-reward-enabled), new: false } })
+    (ok (var-set reward-enabled false))
+  )
+)
+
 
 (define-public (set-asset-slippage (address principal) (new-slippage uint))
   (let (
