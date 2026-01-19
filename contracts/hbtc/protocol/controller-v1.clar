@@ -39,7 +39,7 @@
         (+ mgmt-fee reward))))
     (total-rf (+ (get-sbtc-balance rf) pending-rf))
   )
-    (try! (contract-call? .hq-hbtc check-is-protocol-active))
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
     (try! (contract-call? .hq-hbtc check-is-rewarder contract-caller))
     (try! (contract-call? .state check-max-reward reward))
 

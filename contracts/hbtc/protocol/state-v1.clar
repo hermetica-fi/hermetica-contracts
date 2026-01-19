@@ -85,12 +85,12 @@
 (define-data-var staleness-window uint u50)                       ;; [50 seconds] => ~50 seconds - price staleness check
 
 ;; Operational States
-(define-data-var vault-active bool true)                          ;; vault enabled/disabled flag
-(define-data-var transfer-active bool true)                       ;; vault asset transfers enabled/disabled flag (reserve, fee-collector)
-(define-data-var deposit-active bool true)                        ;; deposits enabled/disabled flag
-(define-data-var redeem-active bool true)                         ;; redeems enabled/disabled flag
-(define-data-var trading-active bool true)                        ;; trading enabled/disabled flag
-(define-data-var express-active bool false)                       ;; express redeems enabled/disabled flag
+(define-data-var vault-enabled bool true)                          ;; vault enabled/disabled flag
+(define-data-var transfer-enabled bool true)                       ;; vault asset transfers enabled/disabled flag (reserve, fee-collector)
+(define-data-var deposit-enabled bool true)                        ;; deposits enabled/disabled flag
+(define-data-var redeem-enabled bool true)                         ;; redeems enabled/disabled flag
+(define-data-var trading-enabled bool true)                        ;; trading enabled/disabled flag
+(define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
 
 ;; Accounting Variables
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
@@ -317,28 +317,28 @@
   (var-get current-express-limit)
 )
 
-(define-read-only (get-vault-active)
-  (var-get vault-active)
+(define-read-only (get-vault-enabled)
+  (var-get vault-enabled)
 )
 
-(define-read-only (get-transfer-active)
-  (var-get transfer-active)
+(define-read-only (get-transfer-enabled)
+  (var-get transfer-enabled)
 )
 
-(define-read-only (get-deposit-active)
-  (var-get deposit-active)
+(define-read-only (get-deposit-enabled)
+  (var-get deposit-enabled)
 )
 
-(define-read-only (get-redeem-active)
-  (var-get redeem-active)
+(define-read-only (get-redeem-enabled)
+  (var-get redeem-enabled)
 )
 
-(define-read-only (get-trading-active)
-  (var-get trading-active)
+(define-read-only (get-trading-enabled)
+  (var-get trading-enabled)
 )
 
-(define-read-only (get-express-active)
-  (var-get express-active)
+(define-read-only (get-express-enabled)
+  (var-get express-enabled)
 )
 
 (define-read-only (get-asset (address principal))
@@ -417,39 +417,39 @@
 ;; Checks
 ;;-------------------------------------
 
-(define-read-only (check-is-vault-active)
+(define-read-only (check-is-vault-enabled)
   (begin
-    (try! (contract-call? .hq-hbtc check-is-protocol-active))
-    (ok (asserts! (get-vault-active) ERR_VAULT_DISABLED))
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (ok (asserts! (get-vault-enabled) ERR_VAULT_DISABLED))
   )
 )
 
-(define-read-only (check-is-deposit-active)
+(define-read-only (check-is-deposit-enabled)
   (begin
-    (try! (check-is-vault-active))
-    (ok (asserts! (get-deposit-active) ERR_DEPOSIT_DISABLED))
+    (try! (check-is-vault-enabled))
+    (ok (asserts! (get-deposit-enabled) ERR_DEPOSIT_DISABLED))
   )
 )
 
-(define-read-only (check-is-redeem-active)
+(define-read-only (check-is-redeem-enabled)
   (begin
-    (try! (check-is-vault-active))
-    (ok (asserts! (get-redeem-active) ERR_REDEEM_DISABLED))
+    (try! (check-is-vault-enabled))
+    (ok (asserts! (get-redeem-enabled) ERR_REDEEM_DISABLED))
   )
 )
 
-(define-read-only (check-is-express-active)
-  (ok (asserts! (get-express-active) ERR_EXPRESS_DISABLED))
+(define-read-only (check-is-express-enabled)
+  (ok (asserts! (get-express-enabled) ERR_EXPRESS_DISABLED))
 )
 
-(define-read-only (check-is-transfer-active)
-  (ok (asserts! (get-transfer-active) ERR_TRANSFER_DISABLED))
+(define-read-only (check-is-transfer-enabled)
+  (ok (asserts! (get-transfer-enabled) ERR_TRANSFER_DISABLED))
 )
 
-(define-read-only (check-is-trading-active)
+(define-read-only (check-is-trading-enabled)
   (begin
-    (try! (check-is-vault-active))
-    (ok (asserts! (get-trading-active) ERR_TRADING_DISABLED))
+    (try! (check-is-vault-enabled))
+    (ok (asserts! (get-trading-enabled) ERR_TRADING_DISABLED))
   )
 ) 
 
@@ -486,10 +486,10 @@
 
 (define-public (check-redeem-auth (shares uint) (is-express bool))
   (begin
-    (try! (check-is-redeem-active))
+    (try! (check-is-redeem-enabled))
     (if is-express 
       (begin
-        (try! (check-is-express-active))
+        (try! (check-is-express-enabled))
         (try! (consume-express-limit (convert-to-assets shares)))
         (ok true)
       )
@@ -500,15 +500,15 @@
 
 (define-read-only (check-transfer-auth (asset principal))
   (begin
-    (try! (check-is-vault-active))
-    (try! (check-is-transfer-active))
+    (try! (check-is-vault-enabled))
+    (try! (check-is-transfer-enabled))
     (check-is-asset asset)
   )
 )
 
 (define-read-only (check-trading-auth (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
   (begin
-    (try! (check-is-trading-active))
+    (try! (check-is-trading-enabled))
     (try! (check-is-external address-1))
     (match address-2 value (try! (check-is-external value)) true)
     (match asset-1 value (try! (check-is-asset value)) true)
@@ -1123,92 +1123,92 @@
   )
 )
 
-(define-public (set-vault-active (active bool))
+(define-public (set-vault-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (print { action: "set-vault-active", user: contract-caller, data: { old: (get-vault-active), new: active } })
-    (ok (var-set vault-active active))
+    (print { action: "set-vault-enabled", user: contract-caller, data: { old: (get-vault-enabled), new: enabled } })
+    (ok (var-set vault-enabled enabled))
   )
 )
 
 (define-public (disable-vault)
   (begin
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
-    (print { action: "disable-vault", user: contract-caller, data: { old: (get-vault-active), new: false } })
-    (ok (var-set vault-active false))
+    (print { action: "disable-vault", user: contract-caller, data: { old: (get-vault-enabled), new: false } })
+    (ok (var-set vault-enabled false))
   )
 )
 
-(define-public (set-transfer-active (active bool))
+(define-public (set-transfer-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (print { action: "set-transfer-active", user: contract-caller, data: { old: (get-transfer-active), new: active } })
-    (ok (var-set transfer-active active))
+    (print { action: "set-transfer-enabled", user: contract-caller, data: { old: (get-transfer-enabled), new: enabled } })
+    (ok (var-set transfer-enabled enabled))
   )
 )
 
 (define-public (disable-transfer)
   (begin
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
-    (print { action: "disable-transfer", user: contract-caller, data: { old: (get-transfer-active), new: false } })
-    (ok (var-set transfer-active false))
+    (print { action: "disable-transfer", user: contract-caller, data: { old: (get-transfer-enabled), new: false } })
+    (ok (var-set transfer-enabled false))
   )
 )
 
-(define-public (set-deposit-active (active bool))
+(define-public (set-deposit-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (print { action: "set-deposit-active", user: contract-caller, data: { old: (get-deposit-active), new: active } })
-    (ok (var-set deposit-active active))
+    (print { action: "set-deposit-enabled", user: contract-caller, data: { old: (get-deposit-enabled), new: enabled } })
+    (ok (var-set deposit-enabled enabled))
   )
 )
 
 (define-public (disable-deposits)
   (begin
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
-    (print { action: "disable-deposits", user: contract-caller, data: { old: (get-deposit-active), new: false } })
-    (ok (var-set deposit-active false))
+    (print { action: "disable-deposits", user: contract-caller, data: { old: (get-deposit-enabled), new: false } })
+    (ok (var-set deposit-enabled false))
   )
 )
 
-(define-public (set-redeem-active (active bool))
+(define-public (set-redeem-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (print { action: "set-redeem-active", user: contract-caller, data: { old: (get-redeem-active), new: active } })
-    (ok (var-set redeem-active active))
+    (print { action: "set-redeem-enabled", user: contract-caller, data: { old: (get-redeem-enabled), new: enabled } })
+    (ok (var-set redeem-enabled enabled))
   )
 )
 
 (define-public (disable-redeem)
   (begin
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
-    (print { action: "disable-redeem", user: contract-caller, data: { old: (get-redeem-active), new: false } })
-    (ok (var-set redeem-active false))
+    (print { action: "disable-redeem", user: contract-caller, data: { old: (get-redeem-enabled), new: false } })
+    (ok (var-set redeem-enabled false))
 
   )
 )
 
-(define-public (set-trading-active (active bool))
+(define-public (set-trading-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (print { action: "set-trading-active", user: contract-caller, data: { old: (get-trading-active), new: active } })
-    (ok (var-set trading-active active))
+    (print { action: "set-trading-enabled", user: contract-caller, data: { old: (get-trading-enabled), new: enabled } })
+    (ok (var-set trading-enabled enabled))
   )
 )
 
 (define-public (disable-trading)
   (begin
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
-    (print { action: "disable-trading", user: contract-caller, data: { old: (get-trading-active), new: false } })
-    (ok (var-set trading-active false))
+    (print { action: "disable-trading", user: contract-caller, data: { old: (get-trading-enabled), new: false } })
+    (ok (var-set trading-enabled false))
   )
 )
 
-(define-public (set-express-active (active bool))
+(define-public (set-express-enabled (enabled bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (print { action: "set-express-active", user: contract-caller, data: { old: (get-express-active), new: active } })
-    (ok (var-set express-active active))
+    (print { action: "set-express-enabled", user: contract-caller, data: { old: (get-express-enabled), new: enabled } })
+    (ok (var-set express-enabled enabled))
   )
 )
 
