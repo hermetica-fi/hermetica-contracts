@@ -58,7 +58,7 @@
   }
   {
     duration: (get-timelock),
-    ts: (+ (get-current-ts) (get-timelock))
+    ts: (+ stacks-block-time (get-timelock))
   }
 )
 
@@ -266,7 +266,7 @@
     (try! (check-is-owner contract-caller))
     (asserts! (not (is-eq duration current)) ERR_DUPLICATE)
     (print { action: "cancel-new-timelock", user: contract-caller, data: { old: current, new: duration } })
-    (ok (var-set next-timelock { duration: current, ts: (get-current-ts) }))
+    (ok (var-set next-timelock { duration: current, ts: stacks-block-time }))
   )
 )
 
@@ -308,7 +308,7 @@
     (try! (check-is-owner contract-caller))
     (asserts! (not (is-eq current next)) ERR_DUPLICATE)
     (print { action: "cancel-new-owner", user: contract-caller, data: { old: current, new: next } })
-    (ok (var-set next-owner { address: current, ts: (get-current-ts) }))
+    (ok (var-set next-owner { address: current, ts: stacks-block-time }))
   )
 )
 

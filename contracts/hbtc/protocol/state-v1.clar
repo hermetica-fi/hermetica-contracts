@@ -788,14 +788,14 @@
 ;; Variable update request functions
 (define-public (request-max-reward-update (new-value uint))
   (begin
-    (asserts! (<= new-value (get reward max)) ERR_ABOVE_MAX)
+    (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)
     (request-var-update MAX_REWARD new-value)
   )
 )
 
 (define-public (request-max-deviation-update (new-value uint))
   (begin
-    (asserts! (<= new-value (get deviation max)) ERR_ABOVE_MAX)
+    (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)
     (request-var-update MAX_DEVIATION new-value)
   )
 )
@@ -848,7 +848,7 @@
 
 (define-public (request-update-window-update (new-value uint))
   (begin
-    (asserts! (>= new-value (get update-window min)) ERR_BELOW_MIN)
+    (asserts! (>= new-value u1) ERR_BELOW_MIN)
     (request-var-update UPDATE_WINDOW new-value)
   )
 )
