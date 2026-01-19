@@ -1,6 +1,6 @@
 ;; @contract Granite Interface
 ;; @version 1
-;; @desc Interface for Granite protocol integration
+;; @description Granite interface for lending/borrowing
 
 (use-trait ft .sip-010-trait.sip-010-trait)
 (use-trait granite-borrower .granite-borrower-trait-v1.granite-borrower-trait)

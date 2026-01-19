@@ -1,4 +1,4 @@
-;; @contract Trading v1
+;; @contract Trading 
 ;; @version 1
 ;; @description Batched and atomic position management across DeFi protocols
 
