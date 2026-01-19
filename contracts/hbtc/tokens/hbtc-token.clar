@@ -12,7 +12,7 @@
 
 (define-constant token-symbol "hBTC")
 
-(define-data-var token-name (string-ascii 32) "Hermetica hBTC")
+(define-data-var token-name (string-ascii 32) "hBTC")
 (define-data-var token-uri (string-utf8 256) u"")
 (define-data-var blacklist-enabled bool false)
 
