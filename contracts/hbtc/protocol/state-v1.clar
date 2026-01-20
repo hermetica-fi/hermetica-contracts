@@ -807,7 +807,6 @@
   )
 )
 
-
 (define-public (request-max-slippage-update (new-value uint))
   (begin
     (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)

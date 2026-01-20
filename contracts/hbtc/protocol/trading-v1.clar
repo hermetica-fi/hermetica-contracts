@@ -83,10 +83,11 @@
     ;; Step 1: Add collateral directly
     (try! (contract-call? .zest-interface zest-collateral-add market collateral-token collateral-amount price-feed-1 price-feed-2))
 
+    ;; Step 2: Borrow asset and stake it in Hermetica
     ;; Validate that borrow token is the canonical borrow token
     (asserts! (is-eq (contract-of borrow-token) usdh-token) ERR_INVALID_TOKEN)
     ;; Borrow asset from Zest v2 market
-    (try! (contract-call? .zest-interface zest-borrow market borrow-token borrow-amount price-feed-1 price-feed-2))
+    (try! (contract-call? .zest-interface zest-borrow market borrow-token borrow-amount none none))
     ;; Stake the borrowed asset into Hermetica
     (try! (contract-call? .hermetica-interface hermetica-stake borrow-amount staking))
 
@@ -157,6 +158,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (asserts! (> collateral-amount u0) ERR_INVALID_AMOUNT)
     (asserts! (> borrow-amount u0) ERR_INVALID_AMOUNT)
+    
     ;; Step 1: Deposit collateral to vault and add as collateral in one tx
     (try! (contract-call? .zest-interface zest-supply-collateral-add market vault collateral-token collateral-amount min-shares price-feed-1 price-feed-2))
 
