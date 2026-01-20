@@ -21,7 +21,8 @@
       assets: (optional uint),
       fee: (optional uint),
       fee-bps: uint,
-      ts: uint
+      ts: uint,
+      is-express: bool
     } uint))
   )
 )
