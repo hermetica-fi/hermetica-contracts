@@ -169,14 +169,6 @@
 )
 
 ;;-------------------------------------
-;; Helper
-;;-------------------------------------
-
-(define-private (get-current-ts)
-  (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1)))
-)
-
-;;-------------------------------------
 ;; Getters
 ;;-------------------------------------
 
@@ -670,7 +662,7 @@
 ;; @param - assets-in: amount of sBTC to consume from express limit
 (define-private (consume-express-limit (assets-in uint))
   (let (
-    (is-reset (if (>= (get-current-ts) (+ (get-last-express-ts) (get-express-window))) true false))
+    (is-reset (if (>= stacks-block-time (+ (get-last-express-ts) (get-express-window))) true false))
     (limit (if is-reset
       (/ (* (get-net-assets) (get-express-limit)) bps-base)
       (get-current-express-limit)))
@@ -679,7 +671,7 @@
     (if (contract-call? .hq-hbtc get-protocol contract-caller)
       (begin
         (print { action: "consume-express-limit", user: contract-caller, data: { old: (get-current-express-limit), new: (- limit assets-in) , is-reset: is-reset } })
-        (if is-reset (var-set last-express-ts (get-current-ts)) true)
+        (if is-reset (var-set last-express-ts stacks-block-time) true)
         (var-set current-express-limit (- limit assets-in))
         (ok true))
       (ok true) ;; if not hq, no limit consumption
@@ -699,7 +691,7 @@
   is-stablecoin: bool
 })))
   (let (
-    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-timelock)))
+    (activation-ts (+ stacks-block-time (contract-call? .hq-hbtc get-timelock)))
     (new-entry { ts: activation-ts, value: value, is-add: is-add, asset-config: asset-config })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
