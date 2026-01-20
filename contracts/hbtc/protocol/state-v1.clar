@@ -44,7 +44,7 @@
 (define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
 (define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
 
-;; Timelocked vars
+;; Timelocked update type IDs for uint vars (0x01-0x9F)
 (define-constant MAX_REWARD 0x01)
 (define-constant MAX_DEVIATION 0x02)
 (define-constant MAX_SLIPPAGE 0x03)
@@ -55,7 +55,7 @@
 (define-constant EXPRESS_WINDOW 0x08)
 (define-constant UPDATE_WINDOW 0x09)
 
-;; Timelocked maps
+;; Timelocked update type IDs for maps (0xA0-0xFF)
 (define-constant ASSET 0xA0)
 (define-constant EXTERNAL 0xA1)
 
@@ -91,7 +91,7 @@
 (define-data-var redeem-enabled bool true)                         ;; redeems enabled/disabled flag
 (define-data-var trading-enabled bool true)                        ;; trading enabled/disabled flag
 (define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
-(define-data-var reward-enabled bool true)                        ;; reward enabled/disabled flag
+(define-data-var reward-enabled bool true)                         ;; rewards enabled/disabled flag
 
 ;; Accounting Variables
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
@@ -166,14 +166,6 @@
       is-stablecoin: bool
     })                                                         
   }
-)
-
-;;-------------------------------------
-;; Helper
-;;-------------------------------------
-
-(define-private (get-current-ts)
-  (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1)))
 )
 
 ;;-------------------------------------
@@ -297,8 +289,7 @@
 (define-read-only (get-effective-express-limit)
   (let (
     (reset-ts (+ (get-last-express-ts) (get-express-window)))
-    (limit 
-      (if (>= stacks-block-time reset-ts)
+    (limit (if (>= stacks-block-time reset-ts)
         (/ (* (get-net-assets) (get-express-limit)) bps-base)
         (var-get current-express-limit)))
   )
@@ -370,12 +361,11 @@
 
 (define-read-only (get-custom-cooldown (address principal) (is-express bool))
   (if is-express
-    (get-express-cooldown)
+    (var-get express-cooldown)
     (get cooldown
       (default-to
-        { cooldown: (get-cooldown) }
-        (map-get? custom-cooldown { address: address })))
-  )
+        { cooldown: (var-get cooldown) }
+        (map-get? custom-cooldown { address: address }))))
 )
 
 (define-read-only (get-custom-exit-fee (address principal) (is-express bool))
@@ -425,36 +415,39 @@
 (define-read-only (check-is-vault-enabled)
   (begin
     (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
-    (ok (asserts! (get-vault-enabled) ERR_VAULT_DISABLED))
+    (ok (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED))
   )
 )
 
 (define-read-only (check-is-deposit-enabled)
   (begin
-    (try! (check-is-vault-enabled))
-    (ok (asserts! (get-deposit-enabled) ERR_DEPOSIT_DISABLED))
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (ok (asserts! (var-get deposit-enabled) ERR_DEPOSIT_DISABLED))
   )
 )
 
 (define-read-only (check-is-redeem-enabled)
   (begin
-    (try! (check-is-vault-enabled))
-    (ok (asserts! (get-redeem-enabled) ERR_REDEEM_DISABLED))
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (ok (asserts! (var-get redeem-enabled) ERR_REDEEM_DISABLED))
   )
 )
 
 (define-read-only (check-is-express-enabled)
-  (ok (asserts! (get-express-enabled) ERR_EXPRESS_DISABLED))
+  (ok (asserts! (var-get express-enabled) ERR_EXPRESS_DISABLED))
 )
 
 (define-read-only (check-is-transfer-enabled)
-  (ok (asserts! (get-transfer-enabled) ERR_TRANSFER_DISABLED))
+  (ok (asserts! (var-get transfer-enabled) ERR_TRANSFER_DISABLED))
 )
 
 (define-read-only (check-is-trading-enabled)
   (begin
-    (try! (check-is-vault-enabled))
-    (ok (asserts! (get-trading-enabled) ERR_TRADING_DISABLED))
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (ok (asserts! (var-get trading-enabled) ERR_TRADING_DISABLED))
   )
 )
 
@@ -498,22 +491,25 @@
 
 (define-public (check-redeem-auth (shares uint) (is-express bool))
   (begin
-    (try! (check-is-redeem-enabled))
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (asserts! (var-get redeem-enabled) ERR_REDEEM_DISABLED)
     (if is-express 
       (begin
-        (try! (check-is-express-enabled))
+        (asserts! (var-get express-enabled) ERR_EXPRESS_DISABLED)
         (try! (consume-express-limit (convert-to-assets shares)))
         (ok true)
       )
-      (ok true) ;; if not express, no limit consumption
+      (ok true)
     )
   )
 )
 
 (define-read-only (check-transfer-auth (asset principal))
   (begin
-    (try! (check-is-vault-enabled))
-    (try! (check-is-transfer-enabled))
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (asserts! (var-get transfer-enabled) ERR_TRANSFER_DISABLED)
     (check-is-asset asset)
   )
 )
@@ -670,7 +666,7 @@
 ;; @param - assets-in: amount of sBTC to consume from express limit
 (define-private (consume-express-limit (assets-in uint))
   (let (
-    (is-reset (if (>= (get-current-ts) (+ (get-last-express-ts) (get-express-window))) true false))
+    (is-reset (if (>= stacks-block-time (+ (get-last-express-ts) (get-express-window))) true false))
     (limit (if is-reset
       (/ (* (get-net-assets) (get-express-limit)) bps-base)
       (get-current-express-limit)))
@@ -679,7 +675,7 @@
     (if (contract-call? .hq-hbtc get-protocol contract-caller)
       (begin
         (print { action: "consume-express-limit", user: contract-caller, data: { old: (get-current-express-limit), new: (- limit assets-in) , is-reset: is-reset } })
-        (if is-reset (var-set last-express-ts (get-current-ts)) true)
+        (if is-reset (var-set last-express-ts stacks-block-time) true)
         (var-set current-express-limit (- limit assets-in))
         (ok true))
       (ok true) ;; if not hq, no limit consumption
@@ -699,7 +695,7 @@
   is-stablecoin: bool
 })))
   (let (
-    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-timelock)))
+    (activation-ts (+ stacks-block-time (contract-call? .hq-hbtc get-timelock)))
     (new-entry { ts: activation-ts, value: value, is-add: is-add, asset-config: asset-config })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
@@ -811,6 +807,14 @@
   )
 )
 
+
+(define-public (request-max-slippage-update (new-value uint))
+  (begin
+    (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)
+    (request-var-update MAX_SLIPPAGE new-value)
+  )
+)
+
 (define-public (request-min-redeem-update (new-value uint))
   (begin
     (asserts! (> new-value u0) ERR_BELOW_MIN)
@@ -822,6 +826,7 @@
   (begin
     (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
     (asserts! (>= new-value (get-express-cooldown)) ERR_BELOW_MIN)
+    ;; Also check against pending express cooldown if exists
     (match (get-update-request-var EXPRESS_COOLDOWN)
       entry (asserts! (>= new-value (unwrap-panic (get value entry))) ERR_BELOW_MIN)
       no-entry true
@@ -864,13 +869,6 @@
   )
 )
 
-(define-public (request-max-slippage-update (new-value uint))
-  (begin
-    (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)
-    (request-var-update MAX_SLIPPAGE new-value)
-  )
-)
-
 ;; Var cancels
 (define-public (cancel-max-reward-request)
   (cancel-var-update MAX_REWARD)
@@ -878,6 +876,10 @@
 
 (define-public (cancel-max-deviation-request)
   (cancel-var-update MAX_DEVIATION)
+)
+
+(define-public (cancel-max-slippage-request)
+  (cancel-var-update MAX_SLIPPAGE)
 )
 
 (define-public (cancel-min-redeem-request)
@@ -904,10 +906,6 @@
   (cancel-var-update UPDATE_WINDOW)
 )
 
-(define-public (cancel-max-slippage-request)
-  (cancel-var-update MAX_SLIPPAGE)
-)
-
 ;; Var confirms
 (define-public (confirm-max-reward-request)
   (confirm-var-update MAX_REWARD)
@@ -915,6 +913,10 @@
 
 (define-public (confirm-max-deviation-request)
   (confirm-var-update MAX_DEVIATION)
+)
+
+(define-public (confirm-max-slippage-request)
+  (confirm-var-update MAX_SLIPPAGE)
 )
 
 (define-public (confirm-min-redeem-request)
@@ -939,10 +941,6 @@
 
 (define-public (confirm-update-window-request)
   (confirm-var-update UPDATE_WINDOW)
-)
-
-(define-public (confirm-max-slippage-request)
-  (confirm-var-update MAX_SLIPPAGE)
 )
 
 ;;-------------------------------------
