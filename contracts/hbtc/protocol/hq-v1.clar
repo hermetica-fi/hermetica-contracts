@@ -2,7 +2,6 @@
 ;; @version 1
 ;; @description Centralized governance contract
 
-
 ;;-------------------------------------
 ;; Constants
 ;;-------------------------------------
@@ -25,7 +24,6 @@
 (define-constant ERR_DUPLICATE (err u101016))
 (define-constant ERR_INVALID_ROLE (err u101017))
 (define-constant ERR_PENDING_REQUEST (err u101018))
-
 
 (define-constant max {
   timelock: u2592000,                                          ;; 30 days in seconds
@@ -338,7 +336,8 @@
     (asserts! (and (>= type 0x01) (<= type 0x08)) ERR_INVALID_ROLE)
     (if is-add
       (asserts! (not is-active) ERR_DUPLICATE)
-      (asserts! is-active ERR_NO_ENTRY))
+      (asserts! is-active ERR_NO_ENTRY)
+    )
     (print { action: "request-update", user: contract-caller, data: { type: type, address: address, entry: new-entry } })
     (ok (asserts! (map-insert update-requests { type: type, address: address } new-entry) ERR_DUPLICATE))
   )
