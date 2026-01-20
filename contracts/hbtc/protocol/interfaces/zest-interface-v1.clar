@@ -47,8 +47,7 @@
   (market <zest-market>)
   (asset <ft>)
   (amount uint)
-  (price-feed-1 (optional (buff 8192)))
-  (price-feed-2 (optional (buff 8192))))
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of market) none (some (contract-of asset)) none))
@@ -75,8 +74,7 @@
   (market <zest-market>)
   (asset <ft>)
   (amount uint)
-  (price-feed-1 (optional (buff 8192)))
-  (price-feed-2 (optional (buff 8192))))
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of market) none (some (contract-of asset)) none))
@@ -99,8 +97,7 @@
   (market <zest-market>)
   (asset <ft>)
   (amount uint)
-  (price-feed-1 (optional (buff 8192)))
-  (price-feed-2 (optional (buff 8192))))
+  (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of market) none (some (contract-of asset)) none))
@@ -114,7 +111,10 @@
     (try! (contract-call? .reserve transfer asset amount current-contract))
     
     (let (
-      (repaid-amount (try! (as-contract? ((with-ft (contract-of asset) "*" amount)) (try! (contract-call? market repay asset amount (some current-contract))))))
+      (repaid-amount (try! (as-contract? 
+        ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
+        (try! (contract-call? market repay asset amount (some current-contract)))
+      )))
       (leftover (if (< repaid-amount amount) (- amount repaid-amount) u0))
     )
       (if (> leftover u0)
