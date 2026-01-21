@@ -91,6 +91,7 @@
 (define-data-var redeem-enabled bool true)                         ;; redeems enabled/disabled flag
 (define-data-var trading-enabled bool true)                        ;; trading enabled/disabled flag
 (define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
+(define-data-var express-limit-enabled bool true)                  ;; express limit enforcement enabled/disabled flag
 (define-data-var reward-enabled bool true)                        ;; reward enabled/disabled flag
 
 ;; Accounting Variables
@@ -296,13 +297,15 @@
 
 (define-read-only (get-effective-express-limit)
   (let (
+    (net-assets (get-net-assets))
     (reset-ts (+ (get-last-express-ts) (get-express-window)))
-    (limit 
-      (if (>= stacks-block-time reset-ts)
-        (/ (* (get-net-assets) (get-express-limit)) bps-base)
-        (var-get current-express-limit)))
+    (limit (if (get-express-limit-enabled)
+        (if (>= stacks-block-time reset-ts)
+          (/ (* net-assets (get-express-limit)) bps-base)
+          (var-get current-express-limit))
+        net-assets))  ;; when limit is disabled, return net-assets (effectively unlimited)
   )
-    { assets: limit, shares: (convert-to-shares limit), reset-ts: reset-ts }
+    { assets: limit, shares: (convert-to-shares limit), reset-ts: reset-ts, enabled: (get-express-limit-enabled) }
   )
 )
 
@@ -340,6 +343,10 @@
 
 (define-read-only (get-express-enabled)
   (var-get express-enabled)
+)
+
+(define-read-only (get-express-limit-enabled)
+  (var-get express-limit-enabled)
 )
 
 (define-read-only (get-reward-enabled)
@@ -502,7 +509,9 @@
     (if is-express 
       (begin
         (try! (check-is-express-enabled))
-        (try! (consume-express-limit (convert-to-assets shares)))
+        (if (get-express-limit-enabled)
+          (try! (consume-express-limit (convert-to-assets shares)))
+          true)
         (ok true)
       )
       (ok true) ;; if not express, no limit consumption
@@ -667,6 +676,7 @@
 
 ;; @desc - Consume express limit when express claim is created (private)
 ;; @desc - Resets limit if window elapsed, validates against effective limit, then consumes
+;; @desc - Only called when express-limit-enabled is true (checked in check-redeem-auth)
 ;; @param - assets-in: amount of sBTC to consume from express limit
 (define-private (consume-express-limit (assets-in uint))
   (let (
@@ -1230,6 +1240,14 @@
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
     (print { action: "set-express-enabled", user: contract-caller, data: { old: (get-express-enabled), new: enabled } })
     (ok (var-set express-enabled enabled))
+  )
+)
+
+(define-public (set-express-limit-enabled (enabled bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (print { action: "set-express-limit-enabled", user: contract-caller, data: { old: (get-express-limit-enabled), new: enabled } })
+    (ok (var-set express-limit-enabled enabled))
   )
 )
 
