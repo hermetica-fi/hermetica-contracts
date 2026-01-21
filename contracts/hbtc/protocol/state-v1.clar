@@ -79,7 +79,7 @@
 (define-data-var min-redeem uint u100)                            ;; [8 decimals] - minimum redeem amount
 (define-data-var cooldown uint u259200)                           ;; [259200 seconds] => 3 days - default redeem cooldown period
 (define-data-var express-cooldown uint u14400)                    ;; [14400 seconds] => 4 hours - express redeem cooldown period
-(define-data-var express-limit uint u250)                         ;; [250 bps] => 2.50% - express limit as bps of net-assets per window
+(define-data-var express-limit uint u250)                         ;; [250 bps] => 2.50% - express limit as bps of total share supply per window
 (define-data-var express-window uint u86400)                      ;; [86400 seconds] => 1 day - reset window for express limit
 (define-data-var update-window uint u86340)                       ;; [86340 seconds] => 23 hours and 59 minutes - min time between reward updates
 (define-data-var staleness-window uint u50)                       ;; [50 seconds] => ~50 seconds - price staleness check
@@ -101,7 +101,7 @@
 (define-data-var last-log-ts uint u0)                             ;; [unix timestamp] - last reward log timestamp
 
 ;; Express Limit Tracking Variables
-(define-data-var current-express-limit uint u0)                   ;; [8 decimals] - current available sBTC amount for express withdrawals
+(define-data-var current-express-limit uint u0)                   ;; [8 decimals] - current available shares (hBTC) amount for express withdrawals
 (define-data-var last-express-ts uint u0)                         ;; [unix timestamp] - timestamp of last express limit reset
 
 ;;-------------------------------------
@@ -297,12 +297,12 @@
 (define-read-only (get-effective-express-limit)
   (let (
     (reset-ts (+ (get-last-express-ts) (get-express-window)))
-    (limit 
-      (if (>= stacks-block-time reset-ts)
-        (/ (* (get-net-assets) (get-express-limit)) bps-base)
+    (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+    (limit (if (>= stacks-block-time reset-ts)
+        (/ (* total-supply (get-express-limit)) bps-base)
         (var-get current-express-limit)))
   )
-    { assets: limit, shares: (convert-to-shares limit), reset-ts: reset-ts }
+    { shares: limit, assets: (convert-to-assets limit), reset-ts: reset-ts }
   )
 )
 
@@ -502,7 +502,7 @@
     (if is-express 
       (begin
         (try! (check-is-express-enabled))
-        (try! (consume-express-limit (convert-to-assets shares)))
+        (try! (consume-express-limit shares))
         (ok true)
       )
       (ok true) ;; if not express, no limit consumption
@@ -665,22 +665,21 @@
 ;; Express Limit Helpers
 ;;-------------------------------------
 
-;; @desc - Consume express limit when express claim is created (private)
-;; @desc - Resets limit if window elapsed, validates against effective limit, then consumes
-;; @param - assets-in: amount of sBTC to consume from express limit
-(define-private (consume-express-limit (assets-in uint))
+;; @desc - Consume express limit when express claim is created
+(define-private (consume-express-limit (shares uint))
   (let (
     (is-reset (if (>= (get-current-ts) (+ (get-last-express-ts) (get-express-window))) true false))
+    (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
     (limit (if is-reset
-      (/ (* (get-net-assets) (get-express-limit)) bps-base)
+      (/ (* total-supply (get-express-limit)) bps-base)
       (get-current-express-limit)))
   )
-    (asserts! (<= assets-in limit) ERR_LIMIT_EXCEEDED)
+    (asserts! (<= shares limit) ERR_LIMIT_EXCEEDED)
     (if (contract-call? .hq-hbtc get-protocol contract-caller)
       (begin
-        (print { action: "consume-express-limit", user: contract-caller, data: { old: (get-current-express-limit), new: (- limit assets-in) , is-reset: is-reset } })
+        (print { action: "consume-express-limit", user: contract-caller, data: { old: (get-current-express-limit), new: (- limit shares) , is-reset: is-reset } })
         (if is-reset (var-set last-express-ts (get-current-ts)) true)
-        (var-set current-express-limit (- limit assets-in))
+        (var-set current-express-limit (- limit shares))
         (ok true))
       (ok true) ;; if not hq, no limit consumption
     )
