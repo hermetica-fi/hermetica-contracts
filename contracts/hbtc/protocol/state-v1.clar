@@ -832,8 +832,7 @@
 
 (define-public (request-express-cooldown-update (new-value uint))
   (begin
-    (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
-    (asserts! (<= new-value (get-cooldown)) ERR_INVALID)
+    (asserts! (<= new-value (get-cooldown)) ERR_ABOVE_MAX)
     ;; Also check against pending cooldown if exists
     (match (get-update-request-var COOLDOWN)
       entry (asserts! (<= new-value (unwrap-panic (get value entry))) ERR_INVALID)
