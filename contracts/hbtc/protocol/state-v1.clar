@@ -91,6 +91,7 @@
 (define-data-var redeem-enabled bool true)                         ;; redeems enabled/disabled flag
 (define-data-var trading-enabled bool true)                        ;; trading enabled/disabled flag
 (define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
+(define-data-var express-limit-enabled bool true)                  ;; express limit enforcement enabled/disabled flag
 (define-data-var reward-enabled bool true)                        ;; reward enabled/disabled flag
 
 ;; Accounting Variables
@@ -166,14 +167,6 @@
       is-stablecoin: bool
     })                                                         
   }
-)
-
-;;-------------------------------------
-;; Helper
-;;-------------------------------------
-
-(define-private (get-current-ts)
-  (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1)))
 )
 
 ;;-------------------------------------
@@ -296,13 +289,18 @@
 
 (define-read-only (get-effective-express-limit)
   (let (
+    (net-assets (get-net-assets))
     (reset-ts (+ (get-last-express-ts) (get-express-window)))
     (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
-    (limit (if (>= stacks-block-time reset-ts)
+    (limit (if (get-express-limit-enabled)
+      (if (>= stacks-block-time reset-ts)
         (/ (* total-supply (get-express-limit)) bps-base)
-        (var-get current-express-limit)))
+        (var-get current-express-limit)
+      )
+      total-supply) ;; return total supply when limit is disabled
+    )
   )
-    { shares: limit, assets: (convert-to-assets limit), reset-ts: reset-ts }
+    { shares: limit, assets: (convert-to-assets limit), reset-ts: reset-ts, enabled: (get-express-limit-enabled) }
   )
 )
 
@@ -340,6 +338,10 @@
 
 (define-read-only (get-express-enabled)
   (var-get express-enabled)
+)
+
+(define-read-only (get-express-limit-enabled)
+  (var-get express-limit-enabled)
 )
 
 (define-read-only (get-reward-enabled)
@@ -502,7 +504,9 @@
     (if is-express 
       (begin
         (try! (check-is-express-enabled))
-        (try! (consume-express-limit shares))
+        (if (get-express-limit-enabled)
+          (try! (consume-express-limit shares))
+          true)
         (ok true)
       )
       (ok true) ;; if not express, no limit consumption
@@ -668,7 +672,7 @@
 ;; @desc - Consume express limit when express claim is created
 (define-private (consume-express-limit (shares uint))
   (let (
-    (is-reset (if (>= (get-current-ts) (+ (get-last-express-ts) (get-express-window))) true false))
+    (is-reset (if (>= stacks-block-time (+ (get-last-express-ts) (get-express-window))) true false))
     (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
     (limit (if is-reset
       (/ (* total-supply (get-express-limit)) bps-base)
@@ -678,7 +682,7 @@
     (if (contract-call? .hq-hbtc get-protocol contract-caller)
       (begin
         (print { action: "consume-express-limit", user: contract-caller, data: { old: (get-current-express-limit), new: (- limit shares) , is-reset: is-reset } })
-        (if is-reset (var-set last-express-ts (get-current-ts)) true)
+        (if is-reset (var-set last-express-ts stacks-block-time) true)
         (var-set current-express-limit (- limit shares))
         (ok true))
       (ok true) ;; if not hq, no limit consumption
@@ -698,7 +702,7 @@
   is-stablecoin: bool
 })))
   (let (
-    (activation-ts (+ (get-current-ts) (contract-call? .hq-hbtc get-timelock)))
+    (activation-ts (+ stacks-block-time (contract-call? .hq-hbtc get-timelock)))
     (new-entry { ts: activation-ts, value: value, is-add: is-add, asset-config: asset-config })
   )
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
@@ -831,8 +835,7 @@
 
 (define-public (request-express-cooldown-update (new-value uint))
   (begin
-    (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
-    (asserts! (<= new-value (get-cooldown)) ERR_INVALID)
+    (asserts! (<= new-value (get-cooldown)) ERR_ABOVE_MAX)
     ;; Also check against pending cooldown if exists
     (match (get-update-request-var COOLDOWN)
       entry (asserts! (<= new-value (unwrap-panic (get value entry))) ERR_INVALID)
@@ -1229,6 +1232,14 @@
     (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
     (print { action: "set-express-enabled", user: contract-caller, data: { old: (get-express-enabled), new: enabled } })
     (ok (var-set express-enabled enabled))
+  )
+)
+
+(define-public (set-express-limit-enabled (enabled bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (print { action: "set-express-limit-enabled", user: contract-caller, data: { old: (get-express-limit-enabled), new: enabled } })
+    (ok (var-set express-limit-enabled enabled))
   )
 )
 

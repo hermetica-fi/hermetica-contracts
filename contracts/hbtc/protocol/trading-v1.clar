@@ -213,3 +213,29 @@
     )
   )
 )
+
+;;=====================================
+;; SWEEP AND REWARD
+;;=====================================
+
+;; @desc - Atomically sweeps leftover tokens from Zest interface to reserve and logs reward
+(define-public (zest-sweep-and-reward
+  (asset <ft>)
+  (sweep-amount uint)
+  (reward uint)
+  (is-positive bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-rewarder contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
+    (asserts! (> sweep-amount u0) ERR_INVALID_AMOUNT)
+
+    ;; Sweep tokens from zest interface to reserve
+    (try! (contract-call? .zest-interface sweep asset sweep-amount))
+
+    ;; Log reward to update token price
+    (try! (contract-call? .controller-hbtc log-reward reward is-positive))
+    
+    (print { action: "zest-sweep-and-reward", user: contract-caller, data: { asset: asset, sweep-amount: sweep-amount, reward: reward, is-positive: is-positive } })
+    (ok true)
+  )
+)

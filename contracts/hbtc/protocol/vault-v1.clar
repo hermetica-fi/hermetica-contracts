@@ -16,6 +16,7 @@
 (define-constant ERR_NOT_FUNDED (err u103006))
 (define-constant ERR_EMPTY_LIST (err u103007))
 (define-constant ERR_NOT_AUTHORIZED (err u103008))
+(define-constant ERR_NOT_ALLOWED (err u103009))
 
 (define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
 (define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
@@ -39,7 +40,8 @@
     assets: (optional uint),                      ;; gross asset amount (includes fee) - calculated at funding time
     fee: (optional uint),                         ;; fee amount in asset
     fee-bps: uint,                                ;; fee basis points
-    ts: uint                                      ;; timestamp in s claim after cooldown
+    ts: uint,                                     ;; timestamp in s claim after cooldown
+    is-express: bool                              ;; whether this is an express redemption (cannot be cancelled)
   }
 )
 
@@ -88,7 +90,7 @@
 )
 
 ;; @desc - creates a claim for redeem operations
-(define-private (create-claim (shares uint) (exit-fee uint) (cooldown uint))
+(define-private (create-claim (shares uint) (exit-fee uint) (cooldown uint) (is-express bool))
   (let (
     (new-claim-id (try! (contract-call? .state increment-claim-id)))
     (ts (+ stacks-block-time cooldown))
@@ -104,10 +106,11 @@
         assets: none,       ;; Will be calculated at funding time
         fee: none,          ;; Will be calculated at funding time
         fee-bps: exit-fee,
-        ts: ts
+        ts: ts,
+        is-express: is-express
       }
     )
-    (print { action: "create-claim", user: contract-caller, data: { claim-id: new-claim-id, shares: shares, cooldown: cooldown, fee-bps: exit-fee, ts: ts } })
+    (print { action: "create-claim", user: contract-caller, data: { claim-id: new-claim-id, shares: shares, cooldown: cooldown, fee-bps: exit-fee, ts: ts, is-express: is-express } })
     (ok new-claim-id)
   )
 )
@@ -121,7 +124,7 @@
     (try! (contract-call? .blacklist check-is-not-soft contract-caller))
     (try! (contract-call? .state check-redeem-auth shares is-express))
 
-    (let ((claim-id (try! (create-claim shares (get exit-fee state) (get cooldown state)))))
+    (let ((claim-id (try! (create-claim shares (get exit-fee state) (get cooldown state) is-express))))
       (print { action: "request-redeem", user: contract-caller, data: { claim-id: claim-id, shares: shares, is-express: is-express } })
       (ok claim-id)
     )
@@ -166,7 +169,7 @@
   )
 )
 
-;; @desc - Cancel a redeem request at any time (only if not yet funded)
+;; @desc - Cancel a redeem request at any time (only if not yet funded and not express)
 (define-public (cancel-redeem (claim-id uint))
   (let (
     (claim (try! (get-claim claim-id)))
@@ -175,6 +178,7 @@
   )
     (asserts! (is-eq contract-caller claim-user) ERR_NOT_AUTHORIZED)
     (asserts! (is-none (get assets claim)) ERR_ALREADY_FUNDED)
+    (asserts! (not (get is-express claim)) ERR_NOT_ALLOWED)
     (try! (contract-call? .blacklist check-is-not-soft claim-user))
     
     (try! (contract-call? .hbtc-token transfer shares current-contract claim-user none))
@@ -262,7 +266,7 @@
 ;; @desc - Processes a single claim for funding (validates, calculates assets/fee/share-price, updates claim map)
 (define-private (process-claim 
   (claim-id uint)
-  (claim { user: principal, shares: uint, share-price: (optional uint), assets: (optional uint), fee: (optional uint), fee-bps: uint, ts: uint }) 
+  (claim { user: principal, shares: uint, share-price: (optional uint), assets: (optional uint), fee: (optional uint), fee-bps: uint, ts: uint, is-express: bool }) 
   (share-price uint)
   (maybe-manager (optional bool)))
   (let (
