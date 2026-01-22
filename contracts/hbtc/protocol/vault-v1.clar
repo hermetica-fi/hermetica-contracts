@@ -150,13 +150,13 @@
 ;; @desc - internal function to perform the redeem operation
 (define-private (redeem-internal (claim-id uint))
   (let (
-    (current-claim (try! (get-claim claim-id)))
-    (assets (unwrap! (get assets current-claim) ERR_NOT_FUNDED))
-    (fee (unwrap-panic (get fee current-claim)))
-    (user (get user current-claim))
+    (claim (try! (get-claim claim-id)))
+    (assets (unwrap! (get assets claim) ERR_NOT_FUNDED))
+    (fee (unwrap-panic (get fee claim)))
+    (user (get user claim))
     (assets-net (- assets fee))
   )
-    (asserts! (>= stacks-block-time (get ts current-claim)) ERR_NOT_COOLED_DOWN)
+    (asserts! (>= stacks-block-time (get ts claim)) ERR_NOT_COOLED_DOWN)
     (try! (contract-call? .blacklist check-is-not-soft user))
     (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer assets-net current-contract user none))
     (if (> fee u0)
