@@ -68,14 +68,6 @@
 ;; Admin
 ;;-------------------------------------
 
-(define-public (set-blacklist-enabled (value bool))
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (print { action: "set-blacklist-enabled", user: contract-caller, data: { old-value: (var-get blacklist-enabled), new-value: value } })
-    (ok (var-set blacklist-enabled value))
-  )
-)
-
 (define-public (set-token-name (value (string-ascii 32)))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
@@ -87,6 +79,14 @@
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (ok (var-set token-uri value))
+  )
+)
+
+(define-public (set-blacklist-enabled (enabled bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (print { action: "set-blacklist-enabled", user: contract-caller, data: { old: (get-blacklist-enabled), new: enabled } })
+    (ok (var-set blacklist-enabled enabled))
   )
 )
 
