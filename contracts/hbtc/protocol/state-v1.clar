@@ -289,7 +289,6 @@
 
 (define-read-only (get-effective-express-limit)
   (let (
-    (net-assets (get-net-assets))
     (reset-ts (+ (get-last-express-ts) (get-express-window)))
     (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
     (limit (if (get-express-limit-enabled)
