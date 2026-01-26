@@ -17,6 +17,7 @@
 (define-constant ERR_EMPTY_LIST (err u103007))
 (define-constant ERR_NOT_AUTHORIZED (err u103008))
 (define-constant ERR_NOT_ALLOWED (err u103009))
+(define-constant ERR_SENDER_NOT_CALLER (err u103010))
 
 (define-constant share-base u100000000)                         ;; 10^8 = 100000000 (share price base)
 (define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
@@ -166,6 +167,23 @@
     (print { action: "redeem", user: contract-caller, data: { claim-id: claim-id, assets: assets, fee: fee, user: user, fee-address: fee-collector } })
     (map-delete claims { claim-id: claim-id })
     (ok assets-net)
+  )
+)
+
+;; @desc - redeems a funded claim and initiates sBTC peg-out to BTC in one atomic transaction
+(define-public (redeem-peg-out 
+  (claim-id uint)
+  (btc-recipient { hashbytes: (buff 32), version: (buff 1) })
+  (max-fee uint))
+  (let (
+    (claim (try! (get-claim claim-id)))
+    (assets (try! (redeem claim-id)))
+  )
+    (asserts! (is-eq tx-sender contract-caller) ERR_SENDER_NOT_CALLER)
+    (asserts! (is-eq tx-sender (get user claim)) ERR_NOT_AUTHORIZED)
+
+    (print { action: "redeem-peg-out", user: contract-caller, data: { claim-id: claim-id, assets: assets, btc-recipient: btc-recipient, max-fee: max-fee } })
+    (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-withdrawal initiate-withdrawal-request assets btc-recipient max-fee)
   )
 )
 
