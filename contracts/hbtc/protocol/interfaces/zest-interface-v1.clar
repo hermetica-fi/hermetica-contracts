@@ -118,7 +118,7 @@
       (leftover (if (< repaid-amount amount) (- amount repaid-amount) u0))
     )
       (if (> leftover u0)
-        (try! (contract-call? asset transfer leftover current-contract reserve none))
+        (try! (as-contract? ((with-ft (contract-of asset) "*" leftover) (with-stx leftover)) (try! (contract-call? asset transfer leftover current-contract reserve none))))
         true
       )
       (print { action: "zest-repay", user: contract-caller, data: { market: market, asset: { token: asset, amount: amount, actual-amount: repaid-amount } } })
@@ -172,7 +172,7 @@
 
     (let (
       ;; Redeem from Zest vault (burns vault shares (z-tokens), receives underlying tokens)
-      (received (try! (as-contract? ((with-ft (contract-of vault) "*" shares) (with-stx shares)) 
+      (received (try! (as-contract? ((with-ft (contract-of vault) "*" shares))
         (try! (contract-call? vault redeem shares min-amount reserve))
       )))
     )
@@ -204,7 +204,7 @@
     ;; Supply and add collateral to Zest market
     (let (
       (received-z-tokens (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) (try! (contract-call? vault deposit amount min-shares current-contract)))))
-      (total-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" received-z-tokens) (with-stx received-z-tokens)) (try! (contract-call? market collateral-add vault received-z-tokens none)))))
+      (total-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" received-z-tokens)) (try! (contract-call? market collateral-add vault received-z-tokens none)))))
     )
       (print { action: "zest-supply-collateral-add", user: contract-caller, data: { market: market, collateral: { token: vault, amount: received-z-tokens, new-total: total-collateral }, underlying: { token: asset, amount: amount } } })
       (ok total-collateral)
@@ -229,8 +229,8 @@
 
     ;; Remove collateral from Zest market and redeem from vault
     (let (
-      (remaining-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" amount) (with-stx amount)) (try! (contract-call? market collateral-remove vault amount (some current-contract) none)))))
-      (received-underlying (try! (as-contract? ((with-ft (contract-of vault) "*" amount) (with-stx amount)) (try! (contract-call? vault redeem amount min-underlying reserve)))))
+      (remaining-collateral (try! (as-contract? () (try! (contract-call? market collateral-remove vault amount (some current-contract) none)))))
+      (received-underlying (try! (as-contract? ((with-ft (contract-of vault) "*" amount)) (try! (contract-call? vault redeem amount min-underlying reserve)))))
     )
       (print { action: "zest-collateral-remove-redeem", user: contract-caller, data: { market: market, collateral: { token: vault, amount: amount, remaining: remaining-collateral }, underlying: { received: received-underlying, min-amount: min-underlying } } })
       (ok received-underlying)

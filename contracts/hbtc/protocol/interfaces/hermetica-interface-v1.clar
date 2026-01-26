@@ -165,7 +165,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some redeeming-asset-contract) none))    
     (try! (contract-call? .reserve transfer usdh-token amount-usdh current-contract))
-    (try! (as-contract? ((with-ft usdh-token "*" amount-usdh) (with-stx (+ amount-usdh max-pyth-fee))) 
+    (try! (as-contract? ((with-ft usdh-token "*" amount-usdh) (with-stx max-pyth-fee)) 
       (try! (contract-call? minting-auto redeem redeeming-asset amount-usdh slippage-tolerance memo price-feed execution-plan))
     ))
     (let (
