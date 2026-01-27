@@ -5,3 +5,5 @@ history.txt
 .cache
 .DS_Store
 .DStore
+node_modules/
+local-testing/tests/clarigen-types.ts

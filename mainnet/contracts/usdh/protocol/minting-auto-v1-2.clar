@@ -1,10 +1,12 @@
 ;; @contract Minting Auto
-;; @version 1.1
+;; @version 1.2
+
+(impl-trait .minting-auto-trait.minting-auto-trait)
 
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
-(use-trait pyth-storage-trait 'SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-traits-v1.storage-trait)
-(use-trait pyth-decoder-trait 'SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-traits-v1.decoder-trait)
-(use-trait wormhole-core-trait 'SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.wormhole-traits-v1.core-trait)
+(use-trait pyth-storage-trait 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2.storage-trait)
+(use-trait pyth-decoder-trait 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2.decoder-trait)
+(use-trait wormhole-core-trait 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.wormhole-traits-v2.core-trait)
 
 ;;-------------------------------------
 ;; Constants
@@ -25,19 +27,17 @@
 (define-constant bps-base (pow u10 u4))
 (define-constant usdh-base (pow u10 u8))
 
-(define-constant max-price-slippage u1000)
-(define-constant max-block-delay u10)
-(define-constant max-mint-limit (* u500000 usdh-base))
+(define-constant max-mint-limit (* u1000000 usdh-base))
 (define-constant min-mint-limit-reset-window u60)
 
 ;;-------------------------------------
 ;; Variables
 ;;-------------------------------------
 
-(define-data-var mint-limit uint (* u100000 usdh-base))
-(define-data-var current-mint-limit uint (* u100000 usdh-base))
+(define-data-var mint-limit uint (* u500000 usdh-base))
+(define-data-var current-mint-limit uint (* u500000 usdh-base))
 (define-data-var mint-limit-reset-window uint u600)
-(define-data-var last-mint-limit-reset uint u0)
+(define-data-var last-mint-limit-reset uint u1757221858)
 
 ;;-------------------------------------
 ;; Getters
@@ -83,14 +83,14 @@
   }))
   (let (
     (minting-asset-contract (contract-of minting-asset))
-    (state (try! (contract-call? .minting-auto-state-v1 get-state contract-caller minting-asset-contract )))
+    (state (try! (contract-call? .minting-auto-state get-state contract-caller minting-asset-contract )))
     (token-base (get token-base state))
     (conf-tolerance-bps (get conf-tolerance-bps state))
     (price-slippage-bps (get price-slippage-bps state))
     (block-timestamp (unwrap-panic (get-stacks-block-info? time (- stacks-block-height (get block-delay state)))))
     (decoded-data
       (match price-feed-bytes value
-        (element-at (try! (contract-call? 'SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-oracle-v3 decode-price-feeds value execution-plan)) u0)
+        (element-at (try! (contract-call? 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-oracle-v4 decode-price-feeds value execution-plan)) u0)
         (some { conf: u0, ema-conf: u0, ema-price: 0, expo: -8, prev-publish-time: u0, price: (to-int (pow u10 u8)), price-identifier: 0x00, publish-time: (+ block-timestamp u1)})
       )
     )
@@ -104,14 +104,14 @@
     (amount-asset-slippage (- amount-asset-required amount-asset-required-before-slippage))
     (fee-amount (/ (* amount-asset-slippage (get mint-fee state)) bps-base))
   )
-    (try! (contract-call? .hq-v1 check-is-enabled))
-    (asserts! (contract-call? .minting-state-v1 get-mint-enabled) ERR_TRADING_DISABLED)
+    (try! (contract-call? .hq check-is-enabled))
+    (asserts! (contract-call? .minting-state get-mint-enabled) ERR_TRADING_DISABLED)
     (asserts! (get is-minter state) ERR_NOT_WHITELISTED)
     (asserts! (get is-supported-asset state) ERR_NOT_SUPPORTED_ASSET)
     (try! (check-confidence decoded-price decoded-price-conf conf-tolerance-bps))
     (asserts! (> timestamp block-timestamp) ERR_STALE_DATA)
     (asserts! (<= price-slippage-bps price-slippage-tolerance ) ERR_PRICE_SLIPPAGE_TOO_HIGH)
-    (asserts! (>= amount-usdh-requested (contract-call? .minting-state-v1 get-min-amount-usdh-requested)) ERR_BELOW_MIN)
+    (asserts! (>= amount-usdh-requested (contract-call? .minting-state get-min-amount-usdh-requested)) ERR_BELOW_MIN)
     (asserts! (> amount-asset-required u0) ERR_AMOUNT_ASSET_REQUIRED_IS_ZERO)
     (asserts! (is-eq (unwrap-panic (get price-identifier decoded-data)) (get price-feed-id state)) ERR_PRICE_FEED_MISMATCH)
 
@@ -125,7 +125,7 @@
 
     (asserts! (<= amount-usdh-requested (get-current-mint-limit)) ERR_MINT_LIMIT_EXCEEDED)
 
-    (try! (contract-call? .usdh-token-v1 mint-for-protocol amount-usdh-requested contract-caller))
+    (try! (contract-call? .usdh-token mint-for-protocol amount-usdh-requested contract-caller))
     (try! (contract-call? minting-asset transfer (- amount-asset-required fee-amount) contract-caller (unwrap-panic (get custody-address state)) memo))
 
     (if (> fee-amount u0)
@@ -155,14 +155,14 @@
   }))
   (let (
     (redeeming-asset-contract (contract-of redeeming-asset))
-    (state (try! (contract-call? .minting-auto-state-v1 get-state contract-caller redeeming-asset-contract )))
+    (state (try! (contract-call? .minting-auto-state get-state contract-caller redeeming-asset-contract )))
     (token-base (get token-base state))
     (conf-tolerance-bps (get conf-tolerance-bps state))
     (price-slippage-bps (get price-slippage-bps state))
     (block-timestamp (unwrap-panic (get-stacks-block-info? time (- stacks-block-height (get block-delay state)))))
     (decoded-data
       (match price-feed-bytes value
-        (element-at (try! (contract-call? 'SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-oracle-v3 decode-price-feeds value execution-plan)) u0)
+        (element-at (try! (contract-call? 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-oracle-v4 decode-price-feeds value execution-plan)) u0)
         (some { conf: u0, ema-conf: u0, ema-price: 0, expo: -8, prev-publish-time: u0, price: (to-int (pow u10 u8)), price-identifier: 0x00, publish-time: (+ block-timestamp u1)})
       )
     )
@@ -176,22 +176,22 @@
     (amount-asset-slippage (- amount-asset-required-before-slippage amount-asset-required))
     (fee-amount (/ (* amount-asset-slippage (get redeem-fee state)) bps-base))
   )
-    (try! (contract-call? .hq-v1 check-is-enabled))
-    (asserts! (contract-call? .minting-state-v1 get-redeem-enabled) ERR_TRADING_DISABLED)
+    (try! (contract-call? .hq check-is-enabled))
+    (asserts! (contract-call? .minting-state get-redeem-enabled) ERR_TRADING_DISABLED)
     (asserts! (get is-redeemer state) ERR_NOT_WHITELISTED)
     (asserts! (get is-supported-asset state) ERR_NOT_SUPPORTED_ASSET)
     (asserts! (is-eq (unwrap-panic (get price-identifier decoded-data)) (get price-feed-id state)) ERR_PRICE_FEED_MISMATCH)
     (try! (check-confidence decoded-price decoded-price-conf conf-tolerance-bps))
     (asserts! (> timestamp block-timestamp) ERR_STALE_DATA)
     (asserts! (<= price-slippage-bps price-slippage-tolerance ) ERR_PRICE_SLIPPAGE_TOO_HIGH)
-    (asserts! (>= amount-usdh-requested (contract-call? .minting-state-v1 get-min-amount-usdh-requested)) ERR_BELOW_MIN)
+    (asserts! (>= amount-usdh-requested (contract-call? .minting-state get-min-amount-usdh-requested)) ERR_BELOW_MIN)
     (asserts! (> amount-asset-required u0) ERR_AMOUNT_ASSET_REQUIRED_IS_ZERO)
 
-    (try! (contract-call? .usdh-token-v1 burn-for-protocol amount-usdh-requested contract-caller))
-    (try! (contract-call? .redeeming-reserve-v1-2 transfer (- amount-asset-required fee-amount) contract-caller redeeming-asset memo))
+    (try! (contract-call? .usdh-token burn-for-protocol amount-usdh-requested contract-caller))
+    (try! (contract-call? .redeeming-reserve transfer (- amount-asset-required fee-amount) contract-caller redeeming-asset memo))
 
     (if (> fee-amount u0)
-      (try! (contract-call? .redeeming-reserve-v1-2 transfer fee-amount (get fee-address state) redeeming-asset none))
+      (try! (contract-call? .redeeming-reserve transfer fee-amount (get fee-address state) redeeming-asset none))
       true
     )
 
@@ -206,7 +206,7 @@
 
 (define-public (set-mint-limit (new-mint-limit uint))
   (begin
-    (try! (contract-call? .hq-v1 check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol contract-caller))
     (asserts! (<= new-mint-limit max-mint-limit) ERR_ABOVE_MAX)
     (print { old-value: (get-mint-limit), new-value: new-mint-limit })
     (ok (var-set mint-limit new-mint-limit)))
@@ -214,7 +214,7 @@
 
 (define-public (set-mint-limit-reset-window (new-window uint))
   (begin
-    (try! (contract-call? .hq-v1 check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol contract-caller))
     (asserts! (>= new-window min-mint-limit-reset-window) ERR_BELOW_MIN)
     (print { old-value: (get-mint-limit-reset-window), new-value: new-window })
     (ok (var-set mint-limit-reset-window new-window)))

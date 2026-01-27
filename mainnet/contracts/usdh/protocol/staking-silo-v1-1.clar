@@ -1,22 +1,18 @@
 ;; @contract Staking Silo
-;; @version 1
+;; @version 1.1
 
 ;;-------------------------------------
 ;; Constants
 ;;-------------------------------------
 
-(define-constant ERR_NO_CLAIM_FOR_ID (err u4001))
-(define-constant ERR_NOT_COOLED_DOWN (err u4002))
-(define-constant ERR_ONLY_STAKING_CONTRACT (err u4003))
-(define-constant ERR_ABOVE_MAX (err u4004))
-
-(define-constant max-cooldown-window u4320)
+(define-constant ERR_NO_CLAIM_FOR_ID (err u3101))
+(define-constant ERR_NOT_COOLED_DOWN (err u3102))
+(define-constant ERR_ONLY_STAKING_CONTRACT (err u3103))
+(define-constant ERR_INVALID_AMOUNT (err u3104))
 
 ;;-------------------------------------
 ;; Variables
 ;;-------------------------------------
-
-(define-data-var cooldown-window uint u1008)
 
 (define-data-var current-claim-id uint u0)
 
@@ -31,17 +27,16 @@
   {
     recipient: principal,
     amount: uint,
-    claim-block-height: uint,
+    ts: uint,
   }
 )
-
 
 ;;-------------------------------------
 ;; Getters
 ;;-------------------------------------
 
-(define-read-only (get-cooldown-window)
-  (var-get cooldown-window)
+(define-read-only (get-current-ts)
+  (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1)))
 )
 
 (define-read-only (get-current-claim-id)
@@ -56,15 +51,16 @@
 ;; User
 ;;-------------------------------------
 
-(define-public (claim-many (entries (list 1000 uint)))
-  (ok (map claim entries)))
+(define-public (withdraw-many (entries (list 1000 uint)))
+  (ok (map withdraw entries)))
 
-(define-public (claim (claim-id uint))
+(define-public (withdraw (claim-id uint))
   (let (
     (current-claim (try! (get-claim claim-id)))
   )
-    (asserts! (>= burn-block-height (+ (get claim-block-height current-claim) (get-cooldown-window))) ERR_NOT_COOLED_DOWN)
+    (asserts! (>= (get-current-ts) (get ts current-claim)) ERR_NOT_COOLED_DOWN)
     (try! (contract-call? .usdh-token transfer (get amount current-claim) (as-contract tx-sender) (get recipient current-claim) none))
+    (print { action: "withdraw", user: contract-caller, data: { claim-id: claim-id, claim-data: current-claim } })
     (ok (map-delete claims { claim-id: claim-id }))
   )
 )
@@ -75,30 +71,20 @@
 
 (define-public (create-claim (amount uint) (recipient principal))
   (let (
-    (next-claim-id (+ (get-current-claim-id) u1))
+    (claim-id (+ u1 (get-current-claim-id)))
+    (ts (+ (get-current-ts) (contract-call? .staking-state get-custom-cooldown recipient)))
   )
     (asserts! (is-eq contract-caller .staking) ERR_ONLY_STAKING_CONTRACT)
-    (map-set claims { claim-id: next-claim-id } 
+    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+    (map-set claims { claim-id: claim-id } 
       {
         recipient: recipient,
         amount: amount,
-        claim-block-height: burn-block-height,
+        ts: ts
       }
     )
-    (var-set current-claim-id next-claim-id)
-    (print {claim-id: next-claim-id, recipient: recipient, claim-block-height: burn-block-height})
-    (ok true)
-  )
-)
-
-;;-------------------------------------
-;; Admin
-;;-------------------------------------
-
-(define-public (set-cooldown-window (new-window uint))
-  (begin
-    (try! (contract-call? .hq check-is-protocol tx-sender))
-    (asserts! (<= new-window max-cooldown-window ) ERR_ABOVE_MAX)
-    (ok (var-set cooldown-window new-window))
+    (print { action: "create-claim", user: contract-caller, data: { claim-id: claim-id, recipient: recipient, amount: amount, claim-ts: ts } })
+    (var-set current-claim-id claim-id)
+    (ok claim-id)
   )
 )
