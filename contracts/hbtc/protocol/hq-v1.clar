@@ -333,7 +333,7 @@
   )
     (try! (check-is-owner contract-caller))
     (try! (check-is-standard address))
-    (asserts! (and (>= type 0x01) (<= type 0x08)) ERR_INVALID_ROLE)
+    (asserts! (and (>= type 0x01) (<= type 0x07)) ERR_INVALID_ROLE)
     (if is-add
       (asserts! (not is-active) ERR_DUPLICATE)
       (asserts! is-active ERR_NO_ENTRY)
