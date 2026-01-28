@@ -1036,7 +1036,7 @@
     (mgmt-changed (not (is-eq mgmt-fee (get mgmt-fee current-fees))))
     (perf-changed (not (is-eq perf-fee (get perf-fee current-fees))))
   )
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (asserts! (<= mgmt-fee (get mgmt-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= perf-fee (get perf-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
@@ -1119,7 +1119,7 @@
 
 (define-public (set-deposit-cap (new-deposit-cap uint))  
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-deposit-cap", user: contract-caller, data: { old: (get-deposit-cap), new: new-deposit-cap } })
     (ok (var-set deposit-cap new-deposit-cap))
   )
@@ -1127,7 +1127,7 @@
 
 (define-public (set-min-deposit (new-min-deposit uint))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (asserts! (> new-min-deposit u0) ERR_BELOW_MIN)
     (print { action: "set-min-deposit", user: contract-caller, data: { old: (get-min-deposit), new: new-min-deposit } })
     (ok (var-set min-deposit new-min-deposit))
@@ -1136,7 +1136,7 @@
 
 (define-public (set-reserve-rate (new-reserve-rate uint))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (asserts! (<= new-reserve-rate (get reserve-rate max)) ERR_ABOVE_MAX)
     (print { action: "set-reserve-rate", user: contract-caller, data: { old: (get-reserve-rate), new: new-reserve-rate } })
     (ok (var-set reserve-rate new-reserve-rate))
@@ -1153,7 +1153,7 @@
 
 (define-public (set-vault-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-vault-enabled", user: contract-caller, data: { old: (get-vault-enabled), new: enabled } })
     (ok (var-set vault-enabled enabled))
   )
@@ -1169,7 +1169,7 @@
 
 (define-public (set-transfer-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-transfer-enabled", user: contract-caller, data: { old: (get-transfer-enabled), new: enabled } })
     (ok (var-set transfer-enabled enabled))
   )
@@ -1185,7 +1185,7 @@
 
 (define-public (set-deposit-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-deposit-enabled", user: contract-caller, data: { old: (get-deposit-enabled), new: enabled } })
     (ok (var-set deposit-enabled enabled))
   )
@@ -1201,7 +1201,7 @@
 
 (define-public (set-redeem-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-redeem-enabled", user: contract-caller, data: { old: (get-redeem-enabled), new: enabled } })
     (ok (var-set redeem-enabled enabled))
   )
@@ -1218,7 +1218,7 @@
 
 (define-public (set-trading-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-trading-enabled", user: contract-caller, data: { old: (get-trading-enabled), new: enabled } })
     (ok (var-set trading-enabled enabled))
   )
@@ -1234,7 +1234,7 @@
 
 (define-public (set-express-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-express-enabled", user: contract-caller, data: { old: (get-express-enabled), new: enabled } })
     (ok (var-set express-enabled enabled))
   )
@@ -1242,7 +1242,7 @@
 
 (define-public (set-express-limit-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-express-limit-enabled", user: contract-caller, data: { old: (get-express-limit-enabled), new: enabled } })
     (ok (var-set express-limit-enabled enabled))
   )
