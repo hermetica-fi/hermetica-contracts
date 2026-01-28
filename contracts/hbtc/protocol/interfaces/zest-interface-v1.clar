@@ -222,13 +222,6 @@
 ;;-------------------------------------
 
 ;; @desc - Common precondition checks and price feed updates
-;; @param - external-1: Address of the first external contract (Zest market/vault)
-;; @param - external-2: Optional address of the second external contract
-;; @param - asset-1: Optional address of the first asset token
-;; @param - asset-2: Optional address of the second asset token
-;; @param - amount: Amount being operated on
-;; @param - price-feed-1: Optional Pyth price feed data channel 1
-;; @param - price-feed-2: Optional Pyth price feed data channel 2
 (define-private (execute-checks-write-feeds
   (external-1 principal) (external-2 (optional principal))
   (asset-1 (optional principal)) (asset-2 (optional principal))
