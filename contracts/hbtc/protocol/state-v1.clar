@@ -30,6 +30,7 @@
 (define-constant ERR_LIMIT_EXCEEDED (err u102020))
 (define-constant ERR_REWARD_DISABLED (err u102021))
 (define-constant ERR_INVALID_DECIMALS (err u102022))
+(define-constant ERR_SWAP_DISABLED (err u102023))
 
 (define-constant max {
   mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
@@ -93,6 +94,7 @@
 (define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
 (define-data-var express-limit-enabled bool true)                  ;; express limit enforcement enabled/disabled flag
 (define-data-var reward-enabled bool true)                         ;; rewards enabled/disabled flag
+(define-data-var swap-enabled bool true)                           ;; swap operations enabled/disabled flag
 
 ;; Accounting Variables
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
@@ -347,6 +349,10 @@
   (var-get reward-enabled)
 )
 
+(define-read-only (get-swap-enabled)
+  (var-get swap-enabled)
+)
+
 (define-read-only (get-asset (address principal))
   (let (
     (asset-entry (default-to 
@@ -358,6 +364,13 @@
   )
     (merge asset-entry { max-slippage: effective-max })
   )
+)
+
+(define-read-only (get-assets-two (address1 principal) (address2 principal))
+  {
+    token1: (get-asset address1),
+    token2: (get-asset address2)
+  }
 )
 
 (define-read-only (get-external (address principal))
@@ -468,6 +481,13 @@
   )
 )
 
+(define-read-only (check-is-swap-enabled)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (ok (asserts! (var-get swap-enabled) ERR_SWAP_DISABLED))
+  )
+)
+
 (define-read-only (check-is-asset (address principal))
   (ok (asserts! (get active (get-asset address)) ERR_NOT_ASSET))
 )
@@ -526,9 +546,26 @@
   )
 )
 
+(define-read-only (check-swap-auth (address-1 principal) (address-2 (optional principal)) (asset-1 principal) (asset-2 principal))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (asserts! (var-get swap-enabled) ERR_SWAP_DISABLED)
+    (asserts! (var-get trading-enabled) ERR_TRADING_DISABLED)
+    (check-externals-and-assets address-1 address-2 (some asset-1) (some asset-2))
+  )
+)
+
 (define-read-only (check-trading-auth (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
   (begin
     (try! (check-is-trading-enabled))
+    (check-externals-and-assets address-1 address-2 asset-1 asset-2)
+  )
+)
+
+;; @desc - Helper to validate external contracts and assets
+(define-read-only (check-externals-and-assets (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
+  (begin
     (try! (check-is-external address-1))
     (match address-2 value (try! (check-is-external value)) true)
     (match asset-1 value (try! (check-is-asset value)) true)
@@ -1261,6 +1298,22 @@
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
     (print { action: "disable-reward", user: contract-caller, data: { old: (get-reward-enabled), new: false } })
     (ok (var-set reward-enabled false))
+  )
+)
+
+(define-public (set-swap-enabled (enabled bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (print { action: "set-swap-enabled", user: contract-caller, data: { old: (get-swap-enabled), new: enabled } })
+    (ok (var-set swap-enabled enabled))
+  )
+)
+
+(define-public (disable-swap)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
+    (print { action: "disable-swap", user: contract-caller, data: { old: (get-swap-enabled), new: false } })
+    (ok (var-set swap-enabled false))
   )
 )
 
