@@ -31,6 +31,7 @@
 (define-constant ERR_REWARD_DISABLED (err u102021))
 (define-constant ERR_INVALID_DECIMALS (err u102022))
 (define-constant ERR_SWAP_DISABLED (err u102023))
+(define-constant ERR_FEE_CONFLICT (err u102024))
 
 (define-constant max {
   mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
@@ -55,6 +56,10 @@
 (define-constant EXPRESS_LIMIT 0x07)
 (define-constant EXPRESS_WINDOW 0x08)
 (define-constant UPDATE_WINDOW 0x09)
+(define-constant MGMT_FEE 0x0A)
+(define-constant PERF_FEE 0x0B)
+(define-constant EXIT_FEE 0x0C)
+(define-constant EXPRESS_FEE 0x0D)
 
 ;; Timelocked update type IDs for maps (0xA0-0xFF)
 (define-constant ASSET 0xA0)
@@ -66,9 +71,10 @@
 
 ;; Fee Settings
 (define-data-var fee-address principal tx-sender)
-(define-data-var fees
-  { mgmt-fee: uint, perf-fee: uint, exit-fee: uint, express-fee: uint }
-  { mgmt-fee: u0, perf-fee: u1000, exit-fee: u0, express-fee: u50 })
+(define-data-var mgmt-fee uint u0)
+(define-data-var perf-fee uint u1000)
+(define-data-var exit-fee uint u0)
+(define-data-var express-fee uint u50)
 
 ;; Operational Limits
 (define-data-var max-reward uint u3)                              ;; [3 bps] => 0.03% - max asset reward/loss per log-reward call
@@ -214,7 +220,23 @@
 )
 
 (define-read-only (get-fees)
-  (var-get fees)
+  { mgmt-fee: (var-get mgmt-fee), perf-fee: (var-get perf-fee), exit-fee: (var-get exit-fee), express-fee: (var-get express-fee) }
+)
+
+(define-read-only (get-mgmt-fee)
+  (var-get mgmt-fee)
+)
+
+(define-read-only (get-perf-fee)
+  (var-get perf-fee)
+)
+
+(define-read-only (get-exit-fee)
+  (var-get exit-fee)
+)
+
+(define-read-only (get-express-fee)
+  (var-get express-fee)
 )
 
 (define-read-only (get-total-assets)  
@@ -393,10 +415,10 @@
 
 (define-read-only (get-custom-exit-fee (address principal) (is-express bool))
   (if is-express
-    (get express-fee (get-fees))
+    (var-get express-fee)
     (get exit-fee
       (default-to
-        { exit-fee: (get exit-fee (get-fees)) }
+        { exit-fee: (var-get exit-fee) }
         (map-get? custom-exit-fee { address: address })))
   )
 )
@@ -792,7 +814,11 @@
   (if (is-eq type EXPRESS_COOLDOWN) (var-set express-cooldown val)
   (if (is-eq type EXPRESS_LIMIT) (var-set express-limit val)
   (if (is-eq type EXPRESS_WINDOW) (var-set express-window val)
-  false))))))))) ;; if no match, return false
+  (if (is-eq type MGMT_FEE) (var-set mgmt-fee val)
+  (if (is-eq type PERF_FEE) (var-set perf-fee val)
+  (if (is-eq type EXIT_FEE) (var-set exit-fee val)
+  (if (is-eq type EXPRESS_FEE) (var-set express-fee val)
+  false))))))))))))) ;; if no match, return false
 )
 
 (define-private (execute-map-update 
@@ -915,6 +941,46 @@
   )
 )
 
+(define-public (request-mgmt-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get mgmt-fee max)) ERR_ABOVE_MAX)
+    (request-var-update MGMT_FEE new-value)
+  )
+)
+
+(define-public (request-perf-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get perf-fee max)) ERR_ABOVE_MAX)
+    (request-var-update PERF_FEE new-value)
+  )
+)
+
+(define-public (request-exit-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get exit-fee max)) ERR_ABOVE_MAX)
+    (asserts! (<= new-value (var-get express-fee)) ERR_INVALID)
+    ;; Also check pending express-fee update if exists
+    (match (get-update-request-var EXPRESS_FEE)
+      entry (asserts! (<= new-value (unwrap-panic (get value entry))) ERR_FEE_CONFLICT)
+      no-entry true
+    )
+    (request-var-update EXIT_FEE new-value)
+  )
+)
+
+(define-public (request-express-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get express-fee max)) ERR_ABOVE_MAX)
+    (asserts! (>= new-value (var-get exit-fee)) ERR_INVALID)
+    ;; Also check pending exit-fee update if exists
+    (match (get-update-request-var EXIT_FEE)
+      entry (asserts! (>= new-value (unwrap-panic (get value entry))) ERR_FEE_CONFLICT)
+      no-entry true
+    )
+    (request-var-update EXPRESS_FEE new-value)
+  )
+)
+
 ;; Var cancels
 (define-public (cancel-max-reward-request)
   (cancel-var-update MAX_REWARD)
@@ -952,6 +1018,22 @@
   (cancel-var-update UPDATE_WINDOW)
 )
 
+(define-public (cancel-mgmt-fee-request)
+  (cancel-var-update MGMT_FEE)
+)
+
+(define-public (cancel-perf-fee-request)
+  (cancel-var-update PERF_FEE)
+)
+
+(define-public (cancel-exit-fee-request)
+  (cancel-var-update EXIT_FEE)
+)
+
+(define-public (cancel-express-fee-request)
+  (cancel-var-update EXPRESS_FEE)
+)
+
 ;; Var confirms
 (define-public (confirm-max-reward-request)
   (confirm-var-update MAX_REWARD)
@@ -987,6 +1069,34 @@
 
 (define-public (confirm-update-window-request)
   (confirm-var-update UPDATE_WINDOW)
+)
+
+(define-public (confirm-mgmt-fee-request)
+  (let (
+    (last-ts (get-last-log-ts))
+  )
+    ;; Window restriction: mgmt-fee can only be changed within 1 hour after rewards
+    (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+    (confirm-var-update MGMT_FEE)
+  )
+)
+
+(define-public (confirm-perf-fee-request)
+  (let (
+    (last-ts (get-last-log-ts))
+  )
+    ;; Window restriction: perf-fee can only be changed within 1 hour after rewards
+    (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+    (confirm-var-update PERF_FEE)
+  )
+)
+
+(define-public (confirm-exit-fee-request)
+  (confirm-var-update EXIT_FEE)
+)
+
+(define-public (confirm-express-fee-request)
+  (confirm-var-update EXPRESS_FEE)
 )
 
 ;;-------------------------------------
@@ -1062,28 +1172,6 @@
     (try! (contract-call? .hq-hbtc check-is-standard address))
     (print { action: "set-fee-address", user: contract-caller, data: { old: (get-fee-address), new: address } })
     (ok (var-set fee-address address))
-  )
-)
-
-(define-public (set-fees (mgmt-fee uint) (perf-fee uint) (exit-fee uint) (express-fee uint))
-  (let (
-    (current-fees (get-fees))
-    (last-ts (get-last-log-ts))
-    (new-fees { mgmt-fee: mgmt-fee, perf-fee: perf-fee, exit-fee: exit-fee, express-fee: express-fee })
-    (mgmt-changed (not (is-eq mgmt-fee (get mgmt-fee current-fees))))
-    (perf-changed (not (is-eq perf-fee (get perf-fee current-fees))))
-  )
-    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
-    (asserts! (<= mgmt-fee (get mgmt-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= perf-fee (get perf-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= express-fee (get express-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= exit-fee express-fee) ERR_INVALID)
-    (if (or mgmt-changed perf-changed)
-      (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
-      true)
-    (print { action: "set-fees", user: contract-caller, data: { old: current-fees, new: new-fees } })
-    (ok (var-set fees new-fees))
   )
 )
 
