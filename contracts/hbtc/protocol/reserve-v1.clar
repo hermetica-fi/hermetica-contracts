@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract Reserve
 ;; @version 1
 ;; @description Main reserve contract holding protocol assets

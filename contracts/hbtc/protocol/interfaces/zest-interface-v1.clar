@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract Zest Interface 
 ;; @version 1
 ;; @description Zest v2 interface for lending/borrowing

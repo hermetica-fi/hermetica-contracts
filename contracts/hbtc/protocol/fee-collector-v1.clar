@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract Fee Collector
 ;; @version 1
 ;; @description Collects protocol fees and transfers to fee address
