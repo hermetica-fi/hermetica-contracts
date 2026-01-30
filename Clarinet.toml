@@ -53,9 +53,9 @@ clarity_version = 2
 epoch = 2.5
 
 [contracts.minting-otc]
-path = 'contracts/usdh/protocol/minting-otc-v1.clar'
-clarity_version = 2
-epoch = 2.5
+path = 'contracts/usdh/protocol/minting-otc-v1-1.clar'
+clarity_version = 4
+epoch = 3.3
 
 [contracts.minting]
 path = 'contracts/usdh/protocol/minting-v1.clar'

@@ -64,7 +64,7 @@
 )
 
 ;; @desc - Process any accumulated unpaid fees and RF when funds are available
-(define-public (fund-transfers)
+(define-public (settle-pending)
   (let (
     (pending (contract-call? .state get-pending))
     (pending-fees (get fees pending))
@@ -87,7 +87,7 @@
         { type: "total-assets", amount: total-pending, is-add: false })
       none
       none))
-    (print { action: "fund-transfers", user: contract-caller, data: { fees: pending-fees, rf: pending-rf, reserve: { old: total-reserve, new: (- total-reserve total-pending) } } })
+    (print { action: "settle-pending", user: contract-caller, data: { fees: pending-fees, rf: pending-rf, reserve: { old: total-reserve, new: (- total-reserve total-pending) } } })
     (ok true)
   )
 )

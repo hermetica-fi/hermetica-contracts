@@ -8,22 +8,21 @@
 
 (define-constant ERR_NOT_OWNER (err u101001))
 (define-constant ERR_NOT_NEXT_OWNER (err u101002))
-(define-constant ERR_NOT_ADMIN (err u101003))
-(define-constant ERR_NOT_GUARDIAN (err u101004))
-(define-constant ERR_NOT_TRADER (err u101005))
-(define-constant ERR_NOT_REWARDER (err u101006))
-(define-constant ERR_NOT_MANAGER (err u101007))
-(define-constant ERR_NOT_FEE_SETTER (err u101008))
-(define-constant ERR_NOT_PROTOCOL (err u101009))
-(define-constant ERR_PROTOCOL_DISABLED (err u101010))
-(define-constant ERR_NOT_STANDARD (err u101011))
-(define-constant ERR_BELOW_MIN (err u101012))
-(define-constant ERR_ABOVE_MAX (err u101013))
-(define-constant ERR_TIMELOCK (err u101014))
-(define-constant ERR_NO_ENTRY (err u101015))
-(define-constant ERR_DUPLICATE (err u101016))
-(define-constant ERR_INVALID_ROLE (err u101017))
-(define-constant ERR_PENDING_REQUEST (err u101018))
+(define-constant ERR_NOT_GUARDIAN (err u101003))
+(define-constant ERR_NOT_TRADER (err u101004))
+(define-constant ERR_NOT_REWARDER (err u101005))
+(define-constant ERR_NOT_MANAGER (err u101006))
+(define-constant ERR_NOT_FEE_SETTER (err u101007))
+(define-constant ERR_NOT_PROTOCOL (err u101008))
+(define-constant ERR_PROTOCOL_DISABLED (err u101009))
+(define-constant ERR_NOT_STANDARD (err u101010))
+(define-constant ERR_BELOW_MIN (err u101011))
+(define-constant ERR_ABOVE_MAX (err u101012))
+(define-constant ERR_TIMELOCK (err u101013))
+(define-constant ERR_NO_ENTRY (err u101014))
+(define-constant ERR_DUPLICATE (err u101015))
+(define-constant ERR_INVALID_ROLE (err u101016))
+(define-constant ERR_PENDING_REQUEST (err u101017))
 
 (define-constant max {
   timelock: u2592000,                                          ;; 30 days in seconds
@@ -34,13 +33,12 @@
 })
 
 ;; Timelocked roles
-(define-constant ADMIN 0x01)
-(define-constant GUARDIAN 0x02)
-(define-constant TRADER 0x03)
-(define-constant REWARDER 0x04)
-(define-constant MANAGER 0x05)
-(define-constant FEE_SETTER 0x06)
-(define-constant PROTOCOL 0x07)
+(define-constant GUARDIAN 0x01)
+(define-constant TRADER 0x02)
+(define-constant REWARDER 0x03)
+(define-constant MANAGER 0x04)
+(define-constant FEE_SETTER 0x05)
+(define-constant PROTOCOL 0x06)
 
 ;;-------------------------------------
 ;; Variables
@@ -129,10 +127,6 @@
   )
 )
 
-(define-read-only (get-admin (address principal))
-  (get active (get-role address ADMIN))
-)
-
 (define-read-only (get-guardian (address principal))
   (get active (get-role address GUARDIAN))
 )
@@ -182,10 +176,6 @@
 
 (define-read-only (check-is-owner (address principal))
   (ok (asserts! (is-eq address (get-owner)) ERR_NOT_OWNER))
-)
-
-(define-read-only (check-is-admin (address principal))
-  (ok (asserts! (get-admin address) ERR_NOT_ADMIN))
 )
 
 (define-read-only (check-is-guardian (address principal))
@@ -333,7 +323,7 @@
   )
     (try! (check-is-owner contract-caller))
     (try! (check-is-standard address))
-    (asserts! (and (>= type 0x01) (<= type 0x08)) ERR_INVALID_ROLE)
+    (asserts! (and (>= type 0x01) (<= type 0x06)) ERR_INVALID_ROLE)
     (if is-add
       (asserts! (not is-active) ERR_DUPLICATE)
       (asserts! is-active ERR_NO_ENTRY)
@@ -372,10 +362,6 @@
 ;;-------------------------------------
 
 ;; request
-(define-public (request-admin-update (address principal) (is-add bool))
-  (request-update ADMIN address is-add)
-)
-
 (define-public (request-guardian-update (address principal) (is-add bool))
   (request-update GUARDIAN address is-add)
 )
@@ -401,10 +387,6 @@
 )
 
 ;; cancel
-(define-public (cancel-admin-request (address principal))
-  (cancel-update ADMIN address)
-)
-
 (define-public (cancel-guardian-request (address principal))
   (cancel-update GUARDIAN address)
 )
@@ -430,10 +412,6 @@
 )
 
 ;; confirm
-(define-public (confirm-admin-request (address principal))
-  (confirm-update ADMIN address)
-)
-
 (define-public (confirm-guardian-request (address principal))
   (confirm-update GUARDIAN address)
 )

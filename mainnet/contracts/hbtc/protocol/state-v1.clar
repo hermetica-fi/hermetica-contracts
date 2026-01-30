@@ -30,6 +30,8 @@
 (define-constant ERR_LIMIT_EXCEEDED (err u102020))
 (define-constant ERR_REWARD_DISABLED (err u102021))
 (define-constant ERR_INVALID_DECIMALS (err u102022))
+(define-constant ERR_SWAP_DISABLED (err u102023))
+(define-constant ERR_FEE_CONFLICT (err u102024))
 
 (define-constant max {
   mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
@@ -54,6 +56,10 @@
 (define-constant EXPRESS_LIMIT 0x07)
 (define-constant EXPRESS_WINDOW 0x08)
 (define-constant UPDATE_WINDOW 0x09)
+(define-constant MGMT_FEE 0x0A)
+(define-constant PERF_FEE 0x0B)
+(define-constant EXIT_FEE 0x0C)
+(define-constant EXPRESS_FEE 0x0D)
 
 ;; Timelocked update type IDs for maps (0xA0-0xFF)
 (define-constant ASSET 0xA0)
@@ -65,9 +71,10 @@
 
 ;; Fee Settings
 (define-data-var fee-address principal tx-sender)
-(define-data-var fees
-  { mgmt-fee: uint, perf-fee: uint, exit-fee: uint, express-fee: uint }
-  { mgmt-fee: u0, perf-fee: u1000, exit-fee: u0, express-fee: u50 })
+(define-data-var mgmt-fee uint u0)
+(define-data-var perf-fee uint u1000)
+(define-data-var exit-fee uint u0)
+(define-data-var express-fee uint u50)
 
 ;; Operational Limits
 (define-data-var max-reward uint u3)                              ;; [3 bps] => 0.03% - max asset reward/loss per log-reward call
@@ -93,6 +100,7 @@
 (define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
 (define-data-var express-limit-enabled bool true)                  ;; express limit enforcement enabled/disabled flag
 (define-data-var reward-enabled bool true)                         ;; rewards enabled/disabled flag
+(define-data-var swap-enabled bool true)                           ;; swap operations enabled/disabled flag
 
 ;; Accounting Variables
 (define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
@@ -212,7 +220,23 @@
 )
 
 (define-read-only (get-fees)
-  (var-get fees)
+  { mgmt-fee: (var-get mgmt-fee), perf-fee: (var-get perf-fee), exit-fee: (var-get exit-fee), express-fee: (var-get express-fee) }
+)
+
+(define-read-only (get-mgmt-fee)
+  (var-get mgmt-fee)
+)
+
+(define-read-only (get-perf-fee)
+  (var-get perf-fee)
+)
+
+(define-read-only (get-exit-fee)
+  (var-get exit-fee)
+)
+
+(define-read-only (get-express-fee)
+  (var-get express-fee)
 )
 
 (define-read-only (get-total-assets)  
@@ -347,6 +371,10 @@
   (var-get reward-enabled)
 )
 
+(define-read-only (get-swap-enabled)
+  (var-get swap-enabled)
+)
+
 (define-read-only (get-asset (address principal))
   (let (
     (asset-entry (default-to 
@@ -358,6 +386,13 @@
   )
     (merge asset-entry { max-slippage: effective-max })
   )
+)
+
+(define-read-only (get-assets-two (address1 principal) (address2 principal))
+  {
+    token1: (get-asset address1),
+    token2: (get-asset address2)
+  }
 )
 
 (define-read-only (get-external (address principal))
@@ -380,10 +415,10 @@
 
 (define-read-only (get-custom-exit-fee (address principal) (is-express bool))
   (if is-express
-    (get express-fee (get-fees))
+    (var-get express-fee)
     (get exit-fee
       (default-to
-        { exit-fee: (get exit-fee (get-fees)) }
+        { exit-fee: (var-get exit-fee) }
         (map-get? custom-exit-fee { address: address })))
   )
 )
@@ -468,6 +503,13 @@
   )
 )
 
+(define-read-only (check-is-swap-enabled)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (ok (asserts! (var-get swap-enabled) ERR_SWAP_DISABLED))
+  )
+)
+
 (define-read-only (check-is-asset (address principal))
   (ok (asserts! (get active (get-asset address)) ERR_NOT_ASSET))
 )
@@ -526,9 +568,26 @@
   )
 )
 
+(define-read-only (check-swap-auth (address-1 principal) (address-2 (optional principal)) (asset-1 principal) (asset-2 principal))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (asserts! (var-get swap-enabled) ERR_SWAP_DISABLED)
+    (asserts! (var-get trading-enabled) ERR_TRADING_DISABLED)
+    (check-externals-and-assets address-1 address-2 (some asset-1) (some asset-2))
+  )
+)
+
 (define-read-only (check-trading-auth (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
   (begin
     (try! (check-is-trading-enabled))
+    (check-externals-and-assets address-1 address-2 asset-1 asset-2)
+  )
+)
+
+;; @desc - Helper to validate external contracts and assets
+(define-read-only (check-externals-and-assets (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
+  (begin
     (try! (check-is-external address-1))
     (match address-2 value (try! (check-is-external value)) true)
     (match asset-1 value (try! (check-is-asset value)) true)
@@ -755,7 +814,11 @@
   (if (is-eq type EXPRESS_COOLDOWN) (var-set express-cooldown val)
   (if (is-eq type EXPRESS_LIMIT) (var-set express-limit val)
   (if (is-eq type EXPRESS_WINDOW) (var-set express-window val)
-  false))))))))) ;; if no match, return false
+  (if (is-eq type MGMT_FEE) (var-set mgmt-fee val)
+  (if (is-eq type PERF_FEE) (var-set perf-fee val)
+  (if (is-eq type EXIT_FEE) (var-set exit-fee val)
+  (if (is-eq type EXPRESS_FEE) (var-set express-fee val)
+  false))))))))))))) ;; if no match, return false
 )
 
 (define-private (execute-map-update 
@@ -878,6 +941,46 @@
   )
 )
 
+(define-public (request-mgmt-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get mgmt-fee max)) ERR_ABOVE_MAX)
+    (request-var-update MGMT_FEE new-value)
+  )
+)
+
+(define-public (request-perf-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get perf-fee max)) ERR_ABOVE_MAX)
+    (request-var-update PERF_FEE new-value)
+  )
+)
+
+(define-public (request-exit-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get exit-fee max)) ERR_ABOVE_MAX)
+    (asserts! (<= new-value (var-get express-fee)) ERR_INVALID)
+    ;; Also check pending express-fee update if exists
+    (match (get-update-request-var EXPRESS_FEE)
+      entry (asserts! (<= new-value (unwrap-panic (get value entry))) ERR_FEE_CONFLICT)
+      no-entry true
+    )
+    (request-var-update EXIT_FEE new-value)
+  )
+)
+
+(define-public (request-express-fee-update (new-value uint))
+  (begin
+    (asserts! (<= new-value (get express-fee max)) ERR_ABOVE_MAX)
+    (asserts! (>= new-value (var-get exit-fee)) ERR_INVALID)
+    ;; Also check pending exit-fee update if exists
+    (match (get-update-request-var EXIT_FEE)
+      entry (asserts! (>= new-value (unwrap-panic (get value entry))) ERR_FEE_CONFLICT)
+      no-entry true
+    )
+    (request-var-update EXPRESS_FEE new-value)
+  )
+)
+
 ;; Var cancels
 (define-public (cancel-max-reward-request)
   (cancel-var-update MAX_REWARD)
@@ -915,6 +1018,22 @@
   (cancel-var-update UPDATE_WINDOW)
 )
 
+(define-public (cancel-mgmt-fee-request)
+  (cancel-var-update MGMT_FEE)
+)
+
+(define-public (cancel-perf-fee-request)
+  (cancel-var-update PERF_FEE)
+)
+
+(define-public (cancel-exit-fee-request)
+  (cancel-var-update EXIT_FEE)
+)
+
+(define-public (cancel-express-fee-request)
+  (cancel-var-update EXPRESS_FEE)
+)
+
 ;; Var confirms
 (define-public (confirm-max-reward-request)
   (confirm-var-update MAX_REWARD)
@@ -950,6 +1069,34 @@
 
 (define-public (confirm-update-window-request)
   (confirm-var-update UPDATE_WINDOW)
+)
+
+(define-public (confirm-mgmt-fee-request)
+  (let (
+    (last-ts (get-last-log-ts))
+  )
+    ;; Window restriction: mgmt-fee can only be changed within 1 hour after rewards
+    (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+    (confirm-var-update MGMT_FEE)
+  )
+)
+
+(define-public (confirm-perf-fee-request)
+  (let (
+    (last-ts (get-last-log-ts))
+  )
+    ;; Window restriction: perf-fee can only be changed within 1 hour after rewards
+    (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
+    (confirm-var-update PERF_FEE)
+  )
+)
+
+(define-public (confirm-exit-fee-request)
+  (confirm-var-update EXIT_FEE)
+)
+
+(define-public (confirm-express-fee-request)
+  (confirm-var-update EXPRESS_FEE)
 )
 
 ;;-------------------------------------
@@ -1028,28 +1175,6 @@
   )
 )
 
-(define-public (set-fees (mgmt-fee uint) (perf-fee uint) (exit-fee uint) (express-fee uint))
-  (let (
-    (current-fees (get-fees))
-    (last-ts (get-last-log-ts))
-    (new-fees { mgmt-fee: mgmt-fee, perf-fee: perf-fee, exit-fee: exit-fee, express-fee: express-fee })
-    (mgmt-changed (not (is-eq mgmt-fee (get mgmt-fee current-fees))))
-    (perf-changed (not (is-eq perf-fee (get perf-fee current-fees))))
-  )
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
-    (asserts! (<= mgmt-fee (get mgmt-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= perf-fee (get perf-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= express-fee (get express-fee max)) ERR_ABOVE_MAX)
-    (asserts! (<= exit-fee express-fee) ERR_INVALID)
-    (if (or mgmt-changed perf-changed)
-      (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
-      true)
-    (print { action: "set-fees", user: contract-caller, data: { old: current-fees, new: new-fees } })
-    (ok (var-set fees new-fees))
-  )
-)
-
 (define-public (set-custom-exit-fee (address principal) (new-exit-fee uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-fee-setter contract-caller))
@@ -1119,7 +1244,7 @@
 
 (define-public (set-deposit-cap (new-deposit-cap uint))  
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-deposit-cap", user: contract-caller, data: { old: (get-deposit-cap), new: new-deposit-cap } })
     (ok (var-set deposit-cap new-deposit-cap))
   )
@@ -1127,7 +1252,7 @@
 
 (define-public (set-min-deposit (new-min-deposit uint))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (asserts! (> new-min-deposit u0) ERR_BELOW_MIN)
     (print { action: "set-min-deposit", user: contract-caller, data: { old: (get-min-deposit), new: new-min-deposit } })
     (ok (var-set min-deposit new-min-deposit))
@@ -1136,7 +1261,7 @@
 
 (define-public (set-reserve-rate (new-reserve-rate uint))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (asserts! (<= new-reserve-rate (get reserve-rate max)) ERR_ABOVE_MAX)
     (print { action: "set-reserve-rate", user: contract-caller, data: { old: (get-reserve-rate), new: new-reserve-rate } })
     (ok (var-set reserve-rate new-reserve-rate))
@@ -1153,7 +1278,7 @@
 
 (define-public (set-vault-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-vault-enabled", user: contract-caller, data: { old: (get-vault-enabled), new: enabled } })
     (ok (var-set vault-enabled enabled))
   )
@@ -1169,7 +1294,7 @@
 
 (define-public (set-transfer-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-transfer-enabled", user: contract-caller, data: { old: (get-transfer-enabled), new: enabled } })
     (ok (var-set transfer-enabled enabled))
   )
@@ -1185,7 +1310,7 @@
 
 (define-public (set-deposit-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-deposit-enabled", user: contract-caller, data: { old: (get-deposit-enabled), new: enabled } })
     (ok (var-set deposit-enabled enabled))
   )
@@ -1201,7 +1326,7 @@
 
 (define-public (set-redeem-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-redeem-enabled", user: contract-caller, data: { old: (get-redeem-enabled), new: enabled } })
     (ok (var-set redeem-enabled enabled))
   )
@@ -1218,7 +1343,7 @@
 
 (define-public (set-trading-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-trading-enabled", user: contract-caller, data: { old: (get-trading-enabled), new: enabled } })
     (ok (var-set trading-enabled enabled))
   )
@@ -1234,7 +1359,7 @@
 
 (define-public (set-express-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-express-enabled", user: contract-caller, data: { old: (get-express-enabled), new: enabled } })
     (ok (var-set express-enabled enabled))
   )
@@ -1242,7 +1367,7 @@
 
 (define-public (set-express-limit-enabled (enabled bool))
   (begin
-    (try! (contract-call? .hq-hbtc check-is-admin contract-caller))
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-express-limit-enabled", user: contract-caller, data: { old: (get-express-limit-enabled), new: enabled } })
     (ok (var-set express-limit-enabled enabled))
   )
@@ -1261,6 +1386,22 @@
     (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
     (print { action: "disable-reward", user: contract-caller, data: { old: (get-reward-enabled), new: false } })
     (ok (var-set reward-enabled false))
+  )
+)
+
+(define-public (set-swap-enabled (enabled bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (print { action: "set-swap-enabled", user: contract-caller, data: { old: (get-swap-enabled), new: enabled } })
+    (ok (var-set swap-enabled enabled))
+  )
+)
+
+(define-public (disable-swap)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-guardian contract-caller))
+    (print { action: "disable-swap", user: contract-caller, data: { old: (get-swap-enabled), new: false } })
+    (ok (var-set swap-enabled false))
   )
 )
 
