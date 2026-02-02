@@ -14,24 +14,25 @@
 (define-constant ERR_VAULT_DISABLED (err u102004))
 (define-constant ERR_DEPOSIT_DISABLED (err u102005))
 (define-constant ERR_REDEEM_DISABLED (err u102006))
-(define-constant ERR_TRADING_DISABLED (err u102007))
-(define-constant ERR_ABOVE_MAX (err u102008))
-(define-constant ERR_BELOW_MIN (err u102009))
-(define-constant ERR_WINDOW_CLOSED (err u102010))
-(define-constant ERR_NO_ENTRY (err u102011))
-(define-constant ERR_DUPLICATE (err u102012))
-(define-constant ERR_DEVIATION (err u102013))
-(define-constant ERR_INVALID (err u102014))
-(define-constant ERR_NO_OPERATIONS (err u102015))
-(define-constant ERR_ZERO_SUPPLY (err u102016))
-(define-constant ERR_EXPRESS_DISABLED (err u102017))
-(define-constant ERR_FEE_WINDOW (err u102018))
-(define-constant ERR_INVALID_TYPE (err u102019))
-(define-constant ERR_LIMIT_EXCEEDED (err u102020))
-(define-constant ERR_REWARD_DISABLED (err u102021))
-(define-constant ERR_INVALID_DECIMALS (err u102022))
-(define-constant ERR_SWAP_DISABLED (err u102023))
-(define-constant ERR_FEE_CONFLICT (err u102024))
+(define-constant ERR_REQUEST_REDEEM_DISABLED (err u102007))
+(define-constant ERR_TRADING_DISABLED (err u102008))
+(define-constant ERR_ABOVE_MAX (err u102009))
+(define-constant ERR_BELOW_MIN (err u102010))
+(define-constant ERR_WINDOW_CLOSED (err u102011))
+(define-constant ERR_NO_ENTRY (err u102012))
+(define-constant ERR_DUPLICATE (err u102013))
+(define-constant ERR_DEVIATION (err u102014))
+(define-constant ERR_INVALID (err u102015))
+(define-constant ERR_NO_OPERATIONS (err u102016))
+(define-constant ERR_ZERO_SUPPLY (err u102017))
+(define-constant ERR_EXPRESS_DISABLED (err u102018))
+(define-constant ERR_FEE_WINDOW (err u102019))
+(define-constant ERR_INVALID_TYPE (err u102020))
+(define-constant ERR_LIMIT_EXCEEDED (err u102021))
+(define-constant ERR_REWARD_DISABLED (err u102022))
+(define-constant ERR_INVALID_DECIMALS (err u102023))
+(define-constant ERR_SWAP_DISABLED (err u102024))
+(define-constant ERR_FEE_CONFLICT (err u102025))
 
 (define-constant max {
   mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
@@ -96,6 +97,7 @@
 (define-data-var transfer-enabled bool true)                       ;; vault asset transfers enabled/disabled flag (reserve, fee-collector)
 (define-data-var deposit-enabled bool true)                        ;; deposits enabled/disabled flag
 (define-data-var redeem-enabled bool true)                         ;; redeems enabled/disabled flag
+(define-data-var request-redeem-enabled bool true)                 ;; request-redeem enabled/disabled flag
 (define-data-var trading-enabled bool true)                        ;; trading enabled/disabled flag
 (define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
 (define-data-var express-limit-enabled bool true)                  ;; express limit enforcement enabled/disabled flag
@@ -355,6 +357,10 @@
   (var-get redeem-enabled)
 )
 
+(define-read-only (get-request-redeem-enabled)
+  (var-get request-redeem-enabled)
+)
+
 (define-read-only (get-trading-enabled)
   (var-get trading-enabled)
 )
@@ -480,6 +486,15 @@
   )
 )
 
+(define-read-only (check-is-request-redeem-enabled)
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
+    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
+    (asserts! (var-get redeem-enabled) ERR_REDEEM_DISABLED)
+    (ok (asserts! (var-get request-redeem-enabled) ERR_REQUEST_REDEEM_DISABLED))
+  )
+)
+
 (define-read-only (check-is-express-enabled)
   (ok (asserts! (var-get express-enabled) ERR_EXPRESS_DISABLED))
 )
@@ -541,12 +556,13 @@
   )
 )
 
-(define-public (check-redeem-auth (shares uint) (is-express bool))
+(define-public (check-request-redeem-auth (shares uint) (is-express bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
     (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
     (asserts! (var-get redeem-enabled) ERR_REDEEM_DISABLED)
-    (if is-express 
+    (asserts! (var-get request-redeem-enabled) ERR_REQUEST_REDEEM_DISABLED)
+    (if is-express
       (begin
         (asserts! (var-get express-enabled) ERR_EXPRESS_DISABLED)
         (if (get-express-limit-enabled)
@@ -1338,6 +1354,14 @@
     (print { action: "disable-redeem", user: contract-caller, data: { old: (get-redeem-enabled), new: false } })
     (ok (var-set redeem-enabled false))
 
+  )
+)
+
+(define-public (set-request-redeem-enabled (enabled bool))
+  (begin
+    (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
+    (print { action: "set-request-redeem-enabled", user: contract-caller, data: { old: (get-request-redeem-enabled), new: enabled } })
+    (ok (var-set request-redeem-enabled enabled))
   )
 )
 
