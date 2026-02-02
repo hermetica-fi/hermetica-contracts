@@ -177,9 +177,8 @@
   (max-fee uint))
   (let (
     (claim (try! (get-claim claim-id)))
-    (assets (try! (redeem-internal claim-id)))
+    (assets (try! (redeem claim-id)))
   )
-    (try! (contract-call? .state check-is-redeem-enabled))
     (asserts! (is-eq tx-sender contract-caller) ERR_SENDER_NOT_CALLER)
     (asserts! (is-eq tx-sender (get user claim)) ERR_NOT_AUTHORIZED)
 
