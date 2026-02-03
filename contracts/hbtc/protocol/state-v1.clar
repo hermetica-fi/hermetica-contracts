@@ -486,15 +486,6 @@
   )
 )
 
-(define-read-only (check-is-request-redeem-enabled)
-  (begin
-    (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
-    (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
-    (asserts! (var-get redeem-enabled) ERR_REDEEM_DISABLED)
-    (ok (asserts! (var-get request-redeem-enabled) ERR_REQUEST_REDEEM_DISABLED))
-  )
-)
-
 (define-read-only (check-is-express-enabled)
   (ok (asserts! (var-get express-enabled) ERR_EXPRESS_DISABLED))
 )
