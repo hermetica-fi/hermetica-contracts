@@ -139,6 +139,7 @@ Close Position: zest-close-remove() → Unstake sUSDh → Repay loan → Remove 
 - [Clarinet](https://github.com/stx-labs/clarinet) - Clarity development environment
 - [Clarigen](https://github.com/mechanismHQ/clarigen) - TypeScript type generator
 - Node.js v18+
+- [Hiro API Key](https://platform.hiro.so/) - Required for mainnet fork testing
 
 ### Setup
 ```bash
@@ -146,6 +147,15 @@ cd local-testing
 npm install
 npm run clarigen  # Generate TypeScript types
 ```
+
+### Environment Variables
+The tests require a Hiro API key to access mainnet fork data:
+
+```bash
+export HIRO_API_KEY=your_api_key_here
+```
+
+Get your free API key at https://platform.hiro.so/
 
 ### Run Tests
 ```bash
