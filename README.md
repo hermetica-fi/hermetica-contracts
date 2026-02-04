@@ -255,7 +255,7 @@ This environment uses **modified contracts** with embedded initialization to:
 
 ## Mainnet Fork Testing
 
-Tests run against a **mainnet fork** at block height 6296063, enabling:
+Tests run against a **mainnet fork** at block height 6316137, enabling:
 - Real Zest Protocol v2 market integration
 - Real Hermetica USDh staking contracts
 - Pyth oracle price feeds

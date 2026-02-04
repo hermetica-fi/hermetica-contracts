@@ -44,7 +44,7 @@ import {
 } from '../helpers/oracle.js';
 
 // Zest mainnet contract addresses
-const ZEST_MARKET = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-2-market';
+const ZEST_MARKET = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-3-market';
 const ZEST_VAULT_SBTC = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc';
 
 // Hermetica mainnet staking contract addresses

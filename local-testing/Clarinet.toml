@@ -1,6 +1,6 @@
 [project]
-name = 'hermetica-usdh-contracts'
-description = 'A Bitcoin-backed synthetic dollar protocol'
+name = 'hermetica-contracts'
+description = 'Hermetica Contracts local testing'
 authors = []
 telemetry = false
 cache_dir = '.cache'
@@ -49,16 +49,16 @@ contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.ft-trait'
 ##### Zest mainnet #####
 
 [[project.requirements]]
-contract_id = 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle' # dia oracle (required by v0-2-market)
+contract_id = 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle' # dia oracle (required by v0-3-market)
 
 [[project.requirements]]
-contract_id = 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.block-info-nakamoto-ststx-ratio-v2' # block info (required by v0-2-market)
+contract_id = 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.block-info-nakamoto-ststx-ratio-v2' # block info (required by v0-3-market)
 
 [[project.requirements]]
 contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-1-data'
 
 [[project.requirements]]
-contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-2-market'
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-3-market'
 
 [[project.requirements]]
 contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-market-vault'
@@ -292,16 +292,6 @@ path = 'contracts/hbtc/traits/vault-trait-v1.clar'
 clarity_version = 4
 epoch = 3.3
 
-[contracts.zest-market-trait-v1]
-path = 'contracts/hbtc/traits/zest-market-trait-v1.clar'
-clarity_version = 4
-epoch = 3.3
-
-[contracts.zest-vault-trait-v1]
-path = 'contracts/hbtc/traits/zest-vault-trait-v1.clar'
-clarity_version = 4
-epoch = 3.3
-
 [contracts.granite-borrower-trait-v1]
 path = 'contracts/hbtc/traits/granite-borrower-trait-v1.clar'
 clarity_version = 4
@@ -320,4 +310,4 @@ callee_filter = false
 enabled = true
 use_mainnet_wallets = true
 api_url = 'https://api.hiro.so'
-initial_height = 6296063
+initial_height = 6316137

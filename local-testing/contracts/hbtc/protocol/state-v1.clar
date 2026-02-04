@@ -1436,7 +1436,7 @@
 )
 
 ;; Register Zest production mainnet contracts as externals
-(map-set externals { address: 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-2-market } { active: true })
+(map-set externals { address: 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-3-market } { active: true })
 (map-set externals { address: 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc } { active: true })
 (map-set externals { address: 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-usdh } { active: true })
 

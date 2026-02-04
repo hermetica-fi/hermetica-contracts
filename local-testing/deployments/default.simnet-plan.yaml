@@ -254,14 +254,4 @@ plan:
             emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: contracts/hbtc/protocol/vault-v1.clar
             clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: zest-market-trait-v1
-            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
-            path: contracts/hbtc/traits/zest-market-trait-v1.clar
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: zest-vault-trait-v1
-            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
-            path: contracts/hbtc/traits/zest-vault-trait-v1.clar
-            clarity-version: 4
       epoch: "3.3"
