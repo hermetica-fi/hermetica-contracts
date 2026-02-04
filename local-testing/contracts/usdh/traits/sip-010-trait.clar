@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 (define-trait sip-010-trait
   (
     ;; Transfer from the caller to a new principal

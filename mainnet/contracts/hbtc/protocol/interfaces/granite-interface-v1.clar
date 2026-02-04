@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract Granite Interface
 ;; @version 1
 ;; @description Granite interface for lending/borrowing

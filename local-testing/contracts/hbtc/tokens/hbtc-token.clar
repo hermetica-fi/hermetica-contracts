@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 (impl-trait .sip-010-trait.sip-010-trait)
 
 ;; Defines the hBTC token according to the SIP010 Standard

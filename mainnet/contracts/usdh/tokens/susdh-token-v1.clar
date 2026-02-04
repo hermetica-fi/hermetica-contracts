@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 (impl-trait .sip-010-trait.sip-010-trait)
 (impl-trait .interim-token-trait.interim-token-trait)
 (use-trait token-migration-trait .token-migration-trait.token-migration-trait)
