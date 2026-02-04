@@ -123,7 +123,7 @@
   )
     (asserts! (>= shares (get min-redeem state)) ERR_BELOW_MIN)
     (try! (contract-call? .blacklist check-is-not-soft contract-caller))
-    (try! (contract-call? .state check-redeem-auth shares is-express))
+    (try! (contract-call? .state check-request-redeem-auth shares is-express))
 
     (let ((claim-id (try! (create-claim shares (get exit-fee state) (get cooldown state) is-express))))
       (print { action: "request-redeem", user: contract-caller, data: { claim-id: claim-id, shares: shares, is-express: is-express } })

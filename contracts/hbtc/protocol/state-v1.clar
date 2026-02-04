@@ -547,7 +547,7 @@
   )
 )
 
-(define-public (check-redeem-auth (shares uint) (is-express bool))
+(define-public (check-request-redeem-auth (shares uint) (is-express bool))
   (begin
     (try! (contract-call? .hq-hbtc check-is-protocol-enabled))
     (asserts! (var-get vault-enabled) ERR_VAULT_DISABLED)
