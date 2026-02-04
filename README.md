@@ -116,8 +116,8 @@ User deposits sBTC → vault.deposit() → controller validates → state update
 ### Redeem Flow (3-step process)
 ```
 1. request-redeem(shares, is-express) → Creates claim with cooldown timestamp
-2. fund-claim(claim-id)               → Manager (anytime) or User (after cooldown)
-3. redeem(claim-id)                   → Burns shares, transfers sBTC to user
+2. fund-claim(claim-id)               → Manager (anytime) or User (after cooldown) - Burns shares
+3. redeem(claim-id)                   → Transfers sBTC to user
 ```
 
 ### Reward Flow (Yield Distribution)
