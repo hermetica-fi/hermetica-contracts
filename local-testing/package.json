@@ -1,7 +1,7 @@
 {
-  "name": "hermetica-hbtc-tests",
+  "name": "hermetica-contracts",
   "version": "1.0.0",
-  "description": "Clarigen tests for hBTC protocol",
+  "description": "Hermetica Contracts local testing",
   "type": "module",
   "private": true,
   "scripts": {
