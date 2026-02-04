@@ -456,7 +456,7 @@
 
 ;; @desc - Batch getter for redeem operation 
 (define-read-only (get-redeem-state (user principal) (is-express bool))
-  { share-price: (get-share-price), exit-fee: (get-custom-exit-fee user is-express), cooldown: (get-custom-cooldown user is-express), min-redeem: (get-min-redeem) }
+  { share-price: (get-share-price), exit-fee: (get-custom-exit-fee user is-express), cooldown: (get-custom-cooldown user is-express), min-redeem: (get-min-redeem), redeem-enabled: (get-redeem-enabled), request-redeem-enabled: (get-request-redeem-enabled) }
 )
 
 ;;-------------------------------------
