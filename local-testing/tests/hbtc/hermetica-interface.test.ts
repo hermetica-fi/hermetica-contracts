@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Hermetica Labs, Inc.
+
 /**
  * Hermetica Interface Tests
  * Tests for USDh staking/unstaking operations through the hBTC protocol
@@ -33,8 +36,8 @@ import {
   sbtcTokenAddress,
 } from '../helpers/setup.js';
 
-// Contract identifiers for trait references
-const stakingContract = `${deployer}.staking`;
+// Hermetica mainnet staking contract addresses
+const stakingContract = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-v1-1';
 const stakingSiloContract = `${deployer}.staking-silo`;
 
 /**
@@ -48,7 +51,7 @@ function initHermeticaInterface() {
   initProtocol();
 
   // Enable trading (required for interface operations)
-  txOk(state.setTradingEnabled(true), admin);
+  txOk(state.setTradingEnabled(true), deployer);
 }
 
 describe('Hermetica Interface', () => {
@@ -156,10 +159,11 @@ describe('Hermetica Interface', () => {
     });
 
     it('should fail if amount is zero', () => {
+      // Use sBTC which is registered as an asset in state
       const result = simnet.callPublicFn(
         `${deployer}.hermetica-interface`,
         'sweep',
-        [Cl.principal(`${deployer}.usdh-token`), Cl.uint(0n)],
+        [Cl.principal(sbtcTokenAddress), Cl.uint(0n)],
         trader
       );
 
@@ -168,7 +172,7 @@ describe('Hermetica Interface', () => {
 
     it('should fail if trading is disabled (via trading auth check)', () => {
       // Disable trading
-      txOk(state.setTradingEnabled(false), admin);
+      txOk(state.setTradingEnabled(false), deployer);
 
       const result = simnet.callPublicFn(
         `${deployer}.hermetica-interface`,
@@ -214,7 +218,7 @@ describe('Hermetica Interface', () => {
   describe('Trading State Checks', () => {
     it('hermetica-stake: should fail if trading is disabled', () => {
       // Disable trading
-      txOk(state.setTradingEnabled(false), admin);
+      txOk(state.setTradingEnabled(false), deployer);
 
       const amount = 100n * ONE_USDH;
 
@@ -231,7 +235,7 @@ describe('Hermetica Interface', () => {
 
     it('hermetica-unstake: should fail if trading is disabled', () => {
       // Disable trading
-      txOk(state.setTradingEnabled(false), admin);
+      txOk(state.setTradingEnabled(false), deployer);
 
       const amount = 100n * ONE_SUSDH;
 

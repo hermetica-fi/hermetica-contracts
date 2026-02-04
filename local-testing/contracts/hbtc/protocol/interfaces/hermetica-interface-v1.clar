@@ -19,8 +19,8 @@
 (define-constant usdh-base u100000000)                          ;; 10^8 = 100000000 (usdh token base)
 
 (define-constant reserve .reserve)
-(define-constant usdh-token .usdh-token)
-(define-constant susdh-token .susdh-token)
+(define-constant usdh-token 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1)
+(define-constant susdh-token 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1)
 
 ;;-------------------------------------
 ;; Trader
@@ -39,7 +39,7 @@
     (try! (as-contract? ((with-ft usdh-token "*" amount)) 
       (try! (contract-call? staking stake amount none))
     ))
-    (try! (contract-call? .susdh-token transfer susdh-amount current-contract reserve none))
+    (try! (contract-call? 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1 transfer susdh-amount current-contract reserve none))
     (print { action: "hermetica-stake", user: contract-caller, data: { usdh-amount: amount, susdh-amount: susdh-amount, ratio: ratio, staking: staking } })
     (ok susdh-amount)
   )
@@ -68,7 +68,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of staking-silo) none none none))
     (try! (contract-call? staking-silo withdraw claim-id))
-    (try! (contract-call? .usdh-token transfer amount current-contract reserve none))
+    (try! (contract-call? 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1 transfer amount current-contract reserve none))
     (print { action: "hermetica-withdraw", user: contract-caller, data: { amount: amount, claim-id: claim-id, staking-silo: staking-silo } })
     (ok amount)
   )
@@ -87,7 +87,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of staking) (some (contract-of staking-silo)) none none))
     (try! (contract-call? staking-silo withdraw claim-id))
-    (try! (contract-call? .usdh-token transfer usdh-amount current-contract reserve none))
+    (try! (contract-call? 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1 transfer usdh-amount current-contract reserve none))
     (print { action: "hermetica-unstake-and-withdraw", user: contract-caller, data: { susdh-amount: amount, usdh-received: usdh-amount, ratio: ratio, staking: staking, staking-silo: staking-silo, claim-id: claim-id } })
     (ok usdh-amount)
   )
@@ -134,7 +134,7 @@
         ))
         true
       )
-      (try! (contract-call? .usdh-token transfer amount-usdh current-contract reserve none))
+      (try! (contract-call? 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1 transfer amount-usdh current-contract reserve none))
       (print { action: "hermetica-mint", user: contract-caller, data: { minting-asset: minting-asset, amount-asset: amount-asset, usdh-received: amount-usdh, leftover: leftover, minting-contract: minting-auto } })
       (ok amount-usdh)
     )

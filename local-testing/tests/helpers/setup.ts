@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Hermetica Labs, Inc.
+
 /**
  * Protocol Setup Helper
  * Initializes the hBTC protocol for testing using Clarigen
@@ -28,8 +31,6 @@ export const wallet7 = accounts.wallet_7.address;
 export const wallet8 = accounts.wallet_8.address;
 
 // Role assignments (pre-configured in hq-v1.clar)
-// Note: deployer is the owner
-export const admin = wallet1;
 export const guardian = wallet2;
 export const trader = wallet3;
 export const rewarder = wallet4;
@@ -86,13 +87,12 @@ export const UPDATE_WINDOW = 86_340;       // ~23 hours 59 minutes
 export const EXPRESS_WINDOW = 86_400;      // 1 day
 
 // Role type constants (from hq-hbtc)
-export const ROLE_ADMIN = Uint8Array.from([0x01]);
-export const ROLE_GUARDIAN = Uint8Array.from([0x02]);
-export const ROLE_TRADER = Uint8Array.from([0x03]);
-export const ROLE_REWARDER = Uint8Array.from([0x04]);
-export const ROLE_MANAGER = Uint8Array.from([0x05]);
-export const ROLE_FEE_SETTER = Uint8Array.from([0x06]);
-export const ROLE_PROTOCOL = Uint8Array.from([0x07]);
+export const ROLE_GUARDIAN = Uint8Array.from([0x01]);
+export const ROLE_TRADER = Uint8Array.from([0x02]);
+export const ROLE_REWARDER = Uint8Array.from([0x03]);
+export const ROLE_MANAGER = Uint8Array.from([0x04]);
+export const ROLE_FEE_SETTER = Uint8Array.from([0x05]);
+export const ROLE_PROTOCOL = Uint8Array.from([0x06]);
 
 // Error codes
 export const ERR = {
@@ -124,17 +124,16 @@ export const ERR = {
   REWARD_DISABLED: 102_021n,
 
   // hq-hbtc errors (101xxx)
-  NOT_OWNER: 101_001n,
+    NOT_OWNER: 101_001n,
   NOT_NEXT_OWNER: 101_002n,
-  NOT_ADMIN: 101_003n,
-  NOT_GUARDIAN: 101_004n,
-  NOT_TRADER: 101_005n,
-  NOT_REWARDER: 101_006n,
-  NOT_MANAGER: 101_007n,
-  NOT_FEE_SETTER: 101_008n,
-  NOT_PROTOCOL: 101_009n,
-  PROTOCOL_DISABLED: 101_010n,
-  TIMELOCK: 101_014n,
+  NOT_GUARDIAN: 101_003n,
+  NOT_TRADER: 101_004n,
+  NOT_REWARDER: 101_005n,
+  NOT_MANAGER: 101_006n,
+  NOT_FEE_SETTER: 101_007n,
+  NOT_PROTOCOL: 101_008n,
+  PROTOCOL_DISABLED: 101_009n,
+  TIMELOCK: 101_013n,
 
   // blacklist errors (108xxx)
   NOT_BLACKLISTER: 108_001n,
@@ -210,21 +209,21 @@ export function fundTestWalletsWithSBTC() {
  *
  * This function:
  * 1. Funds test wallets with sBTC
- * 2. Configures state variables via admin calls
+ * 2. Configures state variables via owner (deployer) calls
  */
 export function initProtocol() {
   // Fund test wallets with sBTC
   fundTestWalletsWithSBTC();
 
-  // Configure state variables (admin can call these)
+  // Configure state variables
   // Set deposit cap: 1000 BTC
-  txOk(state.setDepositCap(1000n * ONE_BTC), admin);
+  txOk(state.setDepositCap(1000n * ONE_BTC), deployer);
 
   // Enable express redemptions
-  txOk(state.setExpressEnabled(true), admin);
+  txOk(state.setExpressEnabled(true), deployer);
 
   // Disable express limit for testing (avoids limit tracking complexity)
-  txOk(state.setExpressLimitEnabled(false), admin);
+  txOk(state.setExpressLimitEnabled(false), deployer);
 }
 
 // Re-export test utilities

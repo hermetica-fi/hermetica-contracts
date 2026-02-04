@@ -35,35 +35,6 @@ contract_id = 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2'
 [[project.requirements]]
 contract_id = 'SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS.borrower-v1' # granite borrower (pyth v4)
 
-##### Zest v2 mainnet #####
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.borrow-helper-v2-1-7' # borrow helper <trait>
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.incentives-v2-2' # incentives <trait>
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.pool-0-reserve-v2-0' # pool reserve (principal)
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0' # lp <reedemable-token>
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.redeemeable-trait-v1-2' # redeemable <trait>
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-2' # oracle sbtc <trait>
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.pool-read-supply-v2-1-3' # pool read supply
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.pool-read-v2-1-4' # pool read
-
-[[project.requirements]]
-contract_id = 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.usdh-oracle-v1-0' # Zest usdh oracle
-
 ##### Zest production mainnet #####
 
 [[project.requirements]]
@@ -75,19 +46,57 @@ contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-traits'
 [[project.requirements]]
 contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.ft-trait'
 
-[[project.requirements]]
-contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-0-market'
+##### Zest mainnet #####
 
 [[project.requirements]]
-contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-sbtc'
+contract_id = 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle' # dia oracle (required by v0-2-market)
 
 [[project.requirements]]
-contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-usdh'
+contract_id = 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.block-info-nakamoto-ststx-ratio-v2' # block info (required by v0-2-market)
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-1-data'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-2-market'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-market-vault'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-usdh'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-usdc'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-ststx'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-stx'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-ststxbtc'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-egroup'
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-assets'
 
 ##### USDh mainnet #####
 
 [[project.requirements]]
 contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1' # usdh mainnet token
+
+[[project.requirements]]
+contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-v1-1' # hermetica staking mainnet
+
+[[project.requirements]]
+contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-v1-1' # hermetica staking-silo mainnet
 
 # protocol
 
@@ -107,9 +116,9 @@ clarity_version = 2
 epoch = 2.5
 
 [contracts.minting-otc]
-path = 'contracts/usdh/protocol/minting-otc-v1.clar'
-clarity_version = 2
-epoch = 2.5
+path = 'contracts/usdh/protocol/minting-otc-v1-1.clar'
+clarity_version = 4
+epoch = 3.3
 
 [contracts.minting]
 path = 'contracts/usdh/protocol/minting-v1.clar'
@@ -311,4 +320,4 @@ callee_filter = false
 enabled = true
 use_mainnet_wallets = true
 api_url = 'https://api.hiro.so'
-initial_height = 6015540
+initial_height = 6296063

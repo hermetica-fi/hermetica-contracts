@@ -8,10 +8,7 @@ export default defineConfig({
     include: ['tests/**/*.{test,spec}.{js,ts}'],
     environment: "clarinet",
     pool: "forks",
-    poolOptions: {
-      threads: { singleThread: true },
-      forks: { singleFork: true },
-    },
+    singleFork: true,
     setupFiles: [
       vitestSetupFilePath,
     ],
@@ -20,8 +17,8 @@ export default defineConfig({
         ...getClarinetVitestsArgv(),
       },
     },
-    // Increase hook timeout for protocol initialization
-    hookTimeout: 60000,
-    testTimeout: 60000,
+    // Increase timeouts for mainnet contract fetching and protocol initialization
+    hookTimeout: 180000,
+    testTimeout: 180000,
   },
 });

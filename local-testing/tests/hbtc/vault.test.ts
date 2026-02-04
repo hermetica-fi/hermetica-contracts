@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Hermetica Labs, Inc.
+
 /**
  * Vault Contract Tests
  * Tests for vault-v1.clar - deposit and redeem operations
@@ -303,6 +306,88 @@ describe('Vault Contract', () => {
       const result = txOk(vault.fundClaim(1n), user1);
 
       expect(result.value).toBeGreaterThan(0n);
+    });
+  });
+
+  describe('Complete Flow: Deposit -> Fund-claim -> Redeem', () => {
+    it('should complete full standard redemption flow', () => {
+      // Step 1: Deposit sBTC and receive hBTC shares
+      const depositAmount = ONE_BTC;
+      const depositResult = txOk(vault.deposit(depositAmount, null), user1);
+      expect(depositResult.value).toBeGreaterThan(0n);
+
+      // Verify hBTC balance
+      const sharesReceived = rov(hbtcToken.getBalance(user1));
+      expect(sharesReceived.value).toBeGreaterThan(0n);
+
+      // Step 2: Request redemption (standard cooldown)
+      const sharesToRedeem = sharesReceived.value as bigint;
+      const claimResult = txOk(vault.requestRedeem(sharesToRedeem, false), user1);
+      const claimId = claimResult.value;
+      expect(claimId).toBe(1n);
+
+      // Verify shares transferred to escrow
+      const balanceAfterRequest = rov(hbtcToken.getBalance(user1));
+      expect(balanceAfterRequest.value).toBe(0n);
+
+      // Step 3: Fund the claim (manager can fund early)
+      const fundResult = txOk(vault.fundClaim(claimId), manager);
+      expect(fundResult.value).toBeGreaterThan(0n);
+
+      // Step 4: Wait for cooldown
+      advancePastCooldown();
+
+      // Step 5: Redeem and receive sBTC
+      const redeemResult = txOk(vault.redeem(claimId), user1);
+      expect(redeemResult.value).toBeGreaterThan(0n);
+    });
+
+    it('should complete full express redemption flow', () => {
+      // Step 1: Deposit sBTC and receive hBTC shares
+      const depositAmount = ONE_BTC;
+      txOk(vault.deposit(depositAmount, null), user1);
+
+      const sharesReceived = rov(hbtcToken.getBalance(user1));
+      const sharesToRedeem = sharesReceived.value as bigint;
+
+      // Step 2: Request express redemption (shorter cooldown)
+      const claimResult = txOk(vault.requestRedeem(sharesToRedeem, true), user1);
+      const claimId = claimResult.value;
+
+      // Step 3: Wait for express cooldown (4 hours instead of 3 days)
+      advancePastExpressCooldown();
+
+      // Step 4: Fund the claim (anyone can fund after cooldown)
+      const fundResult = txOk(vault.fundClaim(claimId), user1);
+      expect(fundResult.value).toBeGreaterThan(0n);
+
+      // Step 5: Redeem immediately (already past cooldown)
+      const redeemResult = txOk(vault.redeem(claimId), user1);
+      expect(redeemResult.value).toBeGreaterThan(0n);
+    });
+
+    it('should allow multiple deposits and partial redemptions', () => {
+      // Deposit from user1
+      txOk(vault.deposit(ONE_BTC, null), user1);
+
+      // Deposit from user2
+      txOk(vault.deposit(ONE_BTC / 2n, null), user2);
+
+      // user1 requests partial redemption
+      const user1Shares = rov(hbtcToken.getBalance(user1)).value as bigint;
+      txOk(vault.requestRedeem(user1Shares / 2n, false), user1);
+
+      // Manager funds the claim
+      txOk(vault.fundClaim(1n), manager);
+
+      // Wait and redeem
+      advancePastCooldown();
+      const redeemResult = txOk(vault.redeem(1n), user1);
+      expect(redeemResult.value).toBeGreaterThan(0n);
+
+      // user1 should still have remaining shares
+      const remainingShares = rov(hbtcToken.getBalance(user1));
+      expect(remainingShares.value).toBeGreaterThan(0n);
     });
   });
 });

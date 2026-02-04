@@ -3,8 +3,8 @@
 ;; @description Batched and atomic position management across DeFi protocols
 
 (use-trait ft 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.ft-trait.ft-trait)
-(use-trait zest-market .zest-market-trait-v1.zest-market-trait)
-(use-trait zest-vault .zest-vault-trait-v1.zest-vault-trait)
+(use-trait zest-market 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.market-trait.market-trait)
+(use-trait zest-vault 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-traits.tokenized-vault)
 (use-trait hbtc-vault-trait .vault-trait-v1.vault-trait)
 (use-trait staking-trait .staking-trait.staking-trait)
 (use-trait staking-silo-trait .staking-silo-trait.staking-silo-trait)
@@ -16,7 +16,7 @@
 (define-constant ERR_INVALID_AMOUNT (err u120001))
 (define-constant ERR_INVALID_TOKEN (err u120002))
 
-(define-constant usdh-token .usdh-token)
+(define-constant usdh-token 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1)
 
 ;; @desc - Borrows asset from Zest v2 market and stakes it in Hermetica
 (define-public (zest-open
