@@ -309,7 +309,7 @@ describe('Vault Contract', () => {
     });
   });
 
-  describe('Complete Flow: Deposit -> Fund-claim -> Redeem', () => {
+  describe('Complete Flow: Deposit -> Request Redeem -> Fund Claim -> Redeem', () => {
     it('should complete full standard redemption flow', () => {
       // Step 1: Deposit sBTC and receive hBTC shares
       const depositAmount = ONE_BTC;

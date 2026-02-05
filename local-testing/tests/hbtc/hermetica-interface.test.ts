@@ -20,18 +20,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Cl } from '@stacks/transactions';
 import {
   hermeticaInterface,
-  reserve,
   state,
   deployer,
   trader,
-  admin,
   user1,
   ONE_USDH,
   ONE_SUSDH,
   ERR,
   txOk,
-  txErr,
-  rov,
   initProtocol,
   sbtcTokenAddress,
 } from '../helpers/setup.js';
@@ -170,10 +166,7 @@ describe('Hermetica Interface', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.HERMETICA_INVALID_AMOUNT));
     });
 
-    it('should fail if trading is disabled (via trading auth check)', () => {
-      // Disable trading
-      txOk(state.setTradingEnabled(false), deployer);
-
+    it('should fail if interface has no tokens to sweep', () => {
       const result = simnet.callPublicFn(
         `${deployer}.hermetica-interface`,
         'sweep',
@@ -181,10 +174,8 @@ describe('Hermetica Interface', () => {
         trader
       );
 
-      // Sweep only checks asset (not full trading auth), so this tests the asset check
-      // The sweep function calls check-is-asset, not check-trading-auth
-      // So trading disabled won't directly fail, but the transfer will fail
-      // because hermetica-interface has no tokens
+      // Sweep checks trader -> asset -> transfer. The transfer will fail
+      // because hermetica-interface has no tokens to send.
       expect(result.result.type).toBe('err');
     });
 

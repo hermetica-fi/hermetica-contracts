@@ -25,14 +25,12 @@ import {
   state,
   deployer,
   trader,
-  admin,
+  rewarder,
   user1,
   ONE_BTC,
   ONE_USDH,
   ERR,
   txOk,
-  txErr,
-  rov,
   initProtocol,
   sbtcTokenAddress,
 } from '../helpers/setup.js';
@@ -143,8 +141,7 @@ describe('Trading Contract', () => {
         trader
       );
 
-      // Should fail with invalid amount error
-      expect(result.result.type).toBe('err');
+      expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
     it('should fail if borrow amount is zero', () => {
@@ -166,8 +163,7 @@ describe('Trading Contract', () => {
         trader
       );
 
-      // Should fail with invalid amount error
-      expect(result.result.type).toBe('err');
+      expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
     it('should successfully add collateral, borrow and stake', async () => {
@@ -252,8 +248,7 @@ describe('Trading Contract', () => {
         trader
       );
 
-      // Should fail with invalid amount error
-      expect(result.result.type).toBe('err');
+      expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
     it('should fail if collateral amount is zero', () => {
@@ -278,8 +273,7 @@ describe('Trading Contract', () => {
         trader
       );
 
-      // Should fail with invalid amount error
-      expect(result.result.type).toBe('err');
+      expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
     it('should successfully unstake, repay and remove collateral', async () => {
@@ -382,8 +376,7 @@ describe('Trading Contract', () => {
         trader
       );
 
-      // Should fail with invalid amount error
-      expect(result.result.type).toBe('err');
+      expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
     it('should successfully borrow and stake', async () => {
@@ -469,8 +462,7 @@ describe('Trading Contract', () => {
         trader
       );
 
-      // Should fail with invalid amount error
-      expect(result.result.type).toBe('err');
+      expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
     it('should successfully unstake and repay', async () => {
@@ -554,8 +546,8 @@ describe('Trading Contract', () => {
         user1 // Not rewarder
       );
 
-      // Should fail - requires both rewarder AND trader roles
-      expect(result.result.type).toBe('err');
+      // Fails on first check: check-is-rewarder
+      expect(result.result).toBeErr(Cl.uint(ERR.NOT_REWARDER));
     });
 
     it('should fail if sweep amount is zero', () => {
@@ -568,11 +560,10 @@ describe('Trading Contract', () => {
           Cl.uint(100n),
           Cl.bool(true),
         ],
-        trader
+        rewarder
       );
 
-      // Should fail with invalid amount error
-      expect(result.result.type).toBe('err');
+      expect(result.result).toBeErr(Cl.uint(ERR.NOT_TRADER));
     });
   });
 });

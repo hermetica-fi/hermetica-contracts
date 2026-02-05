@@ -46,7 +46,7 @@ function advancePastUpdateWindow() {
 
 describe('Controller Contract', () => {
   describe('Log Reward - Authorization & Access Control', () => {
-    it('should fail if not called by rewarder (ERR_NOT_REWARDER u101006)', () => {
+    it('should fail if not called by rewarder (ERR_NOT_REWARDER u101005)', () => {
       // First setup initial deposit
       txOk(vault.deposit(ONE_BTC, null), user1);
 
@@ -153,15 +153,24 @@ describe('Controller Contract', () => {
 
       // Fund the reserve fund
       const reserveFundInitial = ONE_BTC / 10n;
+      const reserveFundAddr = `${deployer}.reserve-fund`;
       simnet.callPublicFn(
         sbtcTokenAddress,
         'transfer',
         [
           Cl.uint(reserveFundInitial),
           Cl.principal(deployer),
-          Cl.principal(`${deployer}.reserve-fund`),
+          Cl.principal(reserveFundAddr),
           Cl.none(),
         ],
+        deployer
+      );
+
+      // Get reserve fund sBTC balance before loss
+      const balanceBefore = simnet.callReadOnlyFn(
+        sbtcTokenAddress,
+        'get-balance',
+        [Cl.principal(reserveFundAddr)],
         deployer
       );
 
@@ -171,9 +180,18 @@ describe('Controller Contract', () => {
       const loss = 100n;
       txOk(controllerHbtc.logReward(loss, false), rewarder);
 
-      // Reserve fund should have covered some/all of the loss
-      // The exact mechanics depend on the contract implementation
-      // This test verifies the loss flow works end-to-end
+      // Get reserve fund sBTC balance after loss
+      const balanceAfter = simnet.callReadOnlyFn(
+        sbtcTokenAddress,
+        'get-balance',
+        [Cl.principal(reserveFundAddr)],
+        deployer
+      );
+
+      // Reserve fund balance should decrease (used to cover the loss)
+      const before = (balanceBefore.result as any).value.value as bigint;
+      const after = (balanceAfter.result as any).value.value as bigint;
+      expect(after).toBeLessThan(before);
     });
   });
 

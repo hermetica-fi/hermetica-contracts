@@ -124,7 +124,7 @@ export const ERR = {
   REWARD_DISABLED: 102_021n,
 
   // hq-hbtc errors (101xxx)
-    NOT_OWNER: 101_001n,
+  NOT_OWNER: 101_001n,
   NOT_NEXT_OWNER: 101_002n,
   NOT_GUARDIAN: 101_003n,
   NOT_TRADER: 101_004n,
@@ -145,6 +145,9 @@ export const ERR = {
 
   // zest-interface errors (111xxx)
   ZEST_INVALID_AMOUNT: 111_001n,
+
+  // trading errors (120xxx)
+  TRADING_INVALID_AMOUNT: 120_001n,
 
   // state trading auth errors (102xxx)
   NOT_CONTRACT: 102_003n,
