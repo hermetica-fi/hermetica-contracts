@@ -1,10 +1,13 @@
-;; @contract Zest Interface 
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
+;; @contract Zest Interface
 ;; @version 1
 ;; @description Zest v2 interface for lending/borrowing
 
-(use-trait ft 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.ft-trait.ft-trait)
-(use-trait zest-market .zest-market-trait-v1.zest-market-trait)
-(use-trait zest-vault .zest-vault-trait-v1.zest-vault-trait)
+(use-trait ft 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.ft-trait.ft-trait)
+(use-trait zest-market 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.market-trait.market-trait)
+(use-trait zest-vault 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-traits.tokenized-vault)
 
 (define-constant ERR_INVALID_AMOUNT (err u111001))
 
@@ -14,7 +17,6 @@
 ;; Trader - Collateral Management
 ;;-------------------------------------
 
-;; @desc - Adds collateral to Zest v2 market
 (define-public (zest-collateral-add
   (market <zest-market>)
   (asset <ft>)
@@ -23,11 +25,9 @@
   (begin
     (try! (execute-checks-write-feeds (contract-of market) none (some (contract-of asset)) none amount price-feed-1 price-feed-2))
 
-    ;; Transfer tokens from reserve to this interface
     (try! (contract-call? .reserve transfer asset amount current-contract))
-    
-    ;; Add collateral to Zest market (position owned by this interface contract)
-    (let ((total (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
+
+    (let ((total (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount))
       (try! (contract-call? market collateral-add asset amount none))
     ))))
       (print { action: "zest-collateral-add", user: contract-caller, data: { market: market, collateral: { token: asset, amount: amount, new-total: total } } })
@@ -36,7 +36,6 @@
   )
 )
 
-;; @desc - Removes collateral from Zest v2 market
 (define-public (zest-collateral-remove
   (market <zest-market>)
   (asset <ft>)
@@ -44,9 +43,9 @@
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (execute-checks-write-feeds (contract-of market) none (some (contract-of asset)) none amount price-feed-1 price-feed-2))
-    
-    ;; Remove collateral from Zest market and capture remaining amount (tokens sent directly to reserve)
+
     (let ((remaining (try! (as-contract? () (try! (contract-call? market collateral-remove asset amount (some reserve) none))))))
+
       (print { action: "zest-collateral-remove", user: contract-caller, data: { market: market, collateral: { token: asset, amount: amount, remaining: remaining } } })
       (ok remaining)
     )
@@ -57,7 +56,6 @@
 ;; Trader - Borrowing
 ;;-------------------------------------
 
-;; @desc - Borrows assets from Zest v2 market
 (define-public (zest-borrow
   (market <zest-market>)
   (asset <ft>)
@@ -65,16 +63,14 @@
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (execute-checks-write-feeds (contract-of market) none (some (contract-of asset)) none amount price-feed-1 price-feed-2))
-    
-    ;; Borrow from Zest market (debt recorded under this interface contract, tokens sent directly to reserve)
+
     (try! (as-contract? () (try! (contract-call? market borrow asset amount (some reserve) none))))
-    
+
     (print { action: "zest-borrow", user: contract-caller, data: { market: market, asset: { token: asset, amount: amount } } })
     (ok true)
   )
 )
 
-;; @desc - Repays borrowed assets to Zest v2 market
 (define-public (zest-repay
   (market <zest-market>)
   (asset <ft>)
@@ -82,13 +78,12 @@
   (price-feed-1 (optional (buff 8192))) (price-feed-2 (optional (buff 8192))))
   (begin
     (try! (execute-checks-write-feeds (contract-of market) none (some (contract-of asset)) none amount price-feed-1 price-feed-2))
-    
-    ;; Transfer repayment from reserve to this interface
+
     (try! (contract-call? .reserve transfer asset amount current-contract))
-    
+
     (let (
-      (repaid-amount (try! (as-contract? 
-        ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
+      (repaid-amount (try! (as-contract?
+        ((with-ft (contract-of asset) "*" amount) (with-stx amount))
         (try! (contract-call? market repay asset amount (some current-contract)))
       )))
       (leftover (if (< repaid-amount amount) (- amount repaid-amount) u0))
@@ -107,7 +102,6 @@
 ;; Liquidity Provider - Vault Management
 ;;-------------------------------------
 
-;; @desc - Deposits assets to Zest v2 vault as liquidity provider
 (define-public (zest-deposit
   (vault <zest-vault>)
   (asset <ft>)
@@ -115,13 +109,11 @@
   (min-shares uint))
   (begin
     (try! (execute-checks-write-feeds (contract-of vault) none (some (contract-of asset)) none amount none none))
-    
-    ;; Transfer asset from reserve to this interface
+
     (try! (contract-call? .reserve transfer asset amount current-contract))
-    
-    ;; Deposit to Zest vault (z-tokens minted directly to reserve)
+
     (let (
-      (received (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
+      (received (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount))
         (try! (contract-call? vault deposit amount min-shares reserve))
       )))
     )
@@ -131,7 +123,6 @@
   )
 )
 
-;; @desc - Redeems vault shares from Zest v2 vault
 (define-public (zest-redeem
   (vault <zest-vault>)
   (shares uint)
@@ -139,11 +130,9 @@
   (begin
     (try! (execute-checks-write-feeds (contract-of vault) none none none shares none none))
 
-    ;; Transfer z-tokens from reserve to this interface
     (try! (contract-call? .reserve transfer vault shares current-contract))
 
     (let (
-      ;; Redeem from Zest vault (burns vault shares (z-tokens), receives underlying tokens)
       (received (try! (as-contract? ((with-ft (contract-of vault) "*" shares))
         (try! (contract-call? vault redeem shares min-amount reserve))
       )))
@@ -154,7 +143,6 @@
   )
 )
 
-;; @desc - Deposits assets to Zest v2 vault and adds as collateral in one tx (Helper wrapper for trading)
 (define-public (zest-supply-collateral-add
   (market <zest-market>) (vault <zest-vault>)
   (asset <ft>)
@@ -164,10 +152,8 @@
   (begin
     (try! (execute-checks-write-feeds (contract-of market) (some (contract-of vault)) (some (contract-of asset)) none amount price-feed-1 price-feed-2))
 
-    ;; Transfer tokens from reserve to this interface
     (try! (contract-call? .reserve transfer asset amount current-contract))
-    
-    ;; Supply and add collateral to Zest market
+
     (let (
       (received-z-tokens (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) (try! (contract-call? vault deposit amount min-shares current-contract)))))
       (total-collateral (try! (as-contract? ((with-ft (contract-of vault) "*" received-z-tokens)) (try! (contract-call? market collateral-add vault received-z-tokens none)))))
@@ -178,7 +164,6 @@
   )
 )
 
-;; @desc - Removes zToken collateral and redeems for underlying in one tx (Helper wrapper for trading)
 (define-public (zest-collateral-remove-redeem
   (market <zest-market>) (vault <zest-vault>)
   (amount uint)
@@ -187,7 +172,6 @@
   (begin
     (try! (execute-checks-write-feeds (contract-of market) (some (contract-of vault)) (some (contract-of vault)) none amount price-feed-1 price-feed-2))
 
-    ;; Remove collateral from Zest market and redeem from vault
     (let (
       (remaining-collateral (try! (as-contract? () (try! (contract-call? market collateral-remove vault amount (some current-contract) none)))))
       (received-underlying (try! (as-contract? ((with-ft (contract-of vault) "*" amount)) (try! (contract-call? vault redeem amount min-underlying reserve)))))
@@ -199,17 +183,16 @@
 )
 
 ;;-------------------------------------
-;; Admin
+;; Sweep
 ;;-------------------------------------
 
-;; @desc - sweeps any leftover tokens from interface contract to reserve
 (define-public (sweep (asset <ft>) (amount uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (try! (as-contract? 
-      ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
+    (try! (as-contract?
+      ((with-ft (contract-of asset) "*" amount) (with-stx amount))
       (try! (contract-call? asset transfer amount current-contract reserve none))
     ))
     (print { action: "sweep", user: contract-caller, data: { sender: current-contract, recipient: reserve, asset: { token: asset, amount: amount } } })
@@ -221,7 +204,6 @@
 ;; Helper
 ;;-------------------------------------
 
-;; @desc - Common precondition checks and price feed updates
 (define-private (execute-checks-write-feeds
   (external-1 principal) (external-2 (optional principal))
   (asset-1 (optional principal)) (asset-2 (optional principal))
@@ -237,7 +219,7 @@
 )
 
 (define-private (write-feed (price-feed (optional (buff 8192))))
-  (match price-feed bytes 
+  (match price-feed bytes
     (begin
       (try! (contract-call? 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-oracle-v4 verify-and-update-price-feeds
         bytes
@@ -250,7 +232,6 @@
       (print { action: "write-feed", user: contract-caller, data: { requested-by: current-contract, oracle: 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-oracle-v4 } })
       (ok true)
     )
-    ;; do nothing if none
     (ok true)
   )
 )

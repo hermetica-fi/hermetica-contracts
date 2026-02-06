@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract Reserve
 ;; @version 1
 ;; @description Main reserve contract holding protocol assets
@@ -10,8 +13,6 @@
 ;; Transfer
 ;;-------------------------------------
 
-;; @desc - transfers asset to recipient
-;; @note - The `with-stx` grant (used alongside `with-ft`) is required to authorize STX spends for external protocol integrations
 (define-public (transfer (asset <ft>) (amount uint) (recipient principal))
   (let (
     (asset-contract (contract-of asset))
@@ -21,7 +22,7 @@
     (try! (contract-call? .state check-transfer-auth asset-contract))
     (asserts! (>= balance amount) ERR_INSUFFICIENT_BALANCE)
     (print { action: "transfer", user: contract-caller, data: { asset: asset, amount: amount, recipient: recipient, sender: current-contract, balance: balance }})
-    (as-contract? ((with-ft asset-contract "*" amount) (with-stx amount)) 
+    (as-contract? ((with-ft asset-contract "*" amount) (with-stx amount))
       (try! (contract-call? asset transfer amount current-contract recipient none))
     )
   )

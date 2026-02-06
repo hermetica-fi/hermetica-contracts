@@ -1,5 +1,8 @@
-;; @contract Vault Trait v1
-;; @version 1.0
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
+;; @contract Vault Trait
+;; @version 1
 
 (define-trait vault-trait
   (

@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract HQ
 ;; @version 1
 ;; @description Centralized governance contract
@@ -25,11 +28,11 @@
 (define-constant ERR_PENDING_REQUEST (err u101017))
 
 (define-constant max {
-  timelock: u2592000,                                          ;; 30 days in seconds
+  timelock: u2592000,
 })
 
 (define-constant min {
-  timelock: u86400,                                            ;; 1 day in seconds
+  timelock: u86400,
 })
 
 ;; Timelocked roles
@@ -49,8 +52,8 @@
 (define-data-var timelock uint u86400)
 (define-data-var next-timelock
   {
-    duration: uint,                                           ;; [uint] - timelock duration in seconds
-    ts: uint                                                  ;; [uint] - activation timestamp
+    duration: uint,
+    ts: uint
   }
   {
     duration: (get-timelock),
@@ -58,14 +61,14 @@
   }
 )
 
-(define-data-var owner principal tx-sender)
+(define-data-var owner principal 'SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT)
 (define-data-var next-owner
   {
-    address: principal,                                       ;; [principal] - next owner address
-    ts: uint                                                  ;; [uint] - activation timestamp
+    address: principal,
+    ts: uint
   }
   {
-    address: tx-sender,
+    address: 'SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT,
     ts: (+ stacks-block-time (get-timelock))
   }
 )
@@ -74,21 +77,20 @@
 ;; Maps
 ;;-------------------------------------
 
-(define-map roles 
+(define-map roles
   {
-    type: (buff 1),                                           ;; [buff 1] - role type
-    address: principal                                        ;; [principal] - role address
+    type: (buff 1),
+    address: principal
   }
   {
     active: bool
   }
 )
 
-;; @desc - stores time-locked requests
-(define-map update-requests 
+(define-map update-requests
   {
-    type: (buff 1),                                          ;; [buff 1] - role type
-    address: principal                                       ;; [principal] - role address
+    type: (buff 1),
+    address: principal
   }
   {
     ts: uint,
@@ -121,7 +123,7 @@
 )
 
 (define-read-only (get-role (address principal) (type (buff 1)))
-  (default-to 
+  (default-to
     { active: false }
     (map-get? roles { type: type, address: address })
   )
@@ -358,10 +360,10 @@
 )
 
 ;;-------------------------------------
-;; Role updates
+;; Role Updates
 ;;-------------------------------------
 
-;; request
+;; Request
 (define-public (request-guardian-update (address principal) (is-add bool))
   (request-update GUARDIAN address is-add)
 )
@@ -386,7 +388,7 @@
   (request-update PROTOCOL address is-add)
 )
 
-;; cancel
+;; Cancel
 (define-public (cancel-guardian-request (address principal))
   (cancel-update GUARDIAN address)
 )
@@ -411,7 +413,7 @@
   (cancel-update PROTOCOL address)
 )
 
-;; confirm
+;; Confirm
 (define-public (confirm-guardian-request (address principal))
   (confirm-update GUARDIAN address)
 )

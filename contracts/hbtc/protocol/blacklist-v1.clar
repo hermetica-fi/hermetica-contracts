@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract Blacklist
 ;; @version 1
 ;; @description Blacklist contract for the protocol
@@ -114,9 +117,9 @@
 
 (define-private (blacklist-processor (entry { address: principal, full: bool }))
   (if (get full entry)
-    (begin 
+    (begin
       (print { action: "add-blacklist", user: contract-caller, data: { entry: entry } })
-      (map-set blacklist { address: (get address entry) } { soft: true, full: true }) 
+      (map-set blacklist { address: (get address entry) } { soft: true, full: true })
     )
     (begin
       (print { action: "add-blacklist", user: contract-caller, data: { entry: entry } })
@@ -126,7 +129,7 @@
 )
 
 (define-private (blacklist-remover (address principal))
-  (begin 
+  (begin
     (print { action: "remove-blacklist", user: contract-caller, data: { address: address } })
     (map-delete blacklist { address: address })
   )

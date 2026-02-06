@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract State
 ;; @version 1
 ;; @description Holds protocol configuration and state
@@ -35,17 +38,17 @@
 (define-constant ERR_FEE_CONFLICT (err u102025))
 
 (define-constant max {
-  mgmt-fee: u55,                                                  ;; [55 bps/10000] => 0.0055% daily (~2% annualized) - max management fee
-  perf-fee: u2000,                                                ;; [2000 bps] => 20.00% - max performance fee on profits
-  exit-fee: u100,                                                 ;; [100 bps] => 1.00% - max exit fee on redeems
-  reserve-rate: u5000,                                            ;; [5000 bps] => 50.00% - max reserve fund allocation rate
-  express-fee: u200,                                              ;; [200 bps] => 2.00% - max express redeem fee
-  cooldown: u2592000,                                             ;; [2592000 seconds] => 30 days - redeem cooldown period
+  mgmt-fee: u55,
+  perf-fee: u3000,
+  exit-fee: u100,
+  reserve-rate: u5000,
+  express-fee: u200,
+  cooldown: u2592000,
 })
 
-(define-constant bps-base u10000)                                 ;; 10^4 = 10000 (basis points base)
-(define-constant share-base u100000000)                           ;; 10^8 = 100000000 (share price base) 
-(define-constant one-hour u3600)                                  ;; [3600 seconds] => 1 hour - mgmt/perf fee change window after rewards
+(define-constant bps-base u10000)
+(define-constant share-base u100000000)
+(define-constant one-hour u3600)
 
 ;; Timelocked update type IDs for uint vars (0x01-0x9F)
 (define-constant MAX_REWARD 0x01)
@@ -71,49 +74,49 @@
 ;;-------------------------------------
 
 ;; Fee Settings
-(define-data-var fee-address principal tx-sender)
+(define-data-var fee-address principal 'SPNPZKNY20QNMQM1AX8GG5YV2MGXZ9TBVB2KXFCN)
 (define-data-var mgmt-fee uint u0)
 (define-data-var perf-fee uint u1000)
 (define-data-var exit-fee uint u0)
 (define-data-var express-fee uint u50)
 
 ;; Operational Limits
-(define-data-var max-reward uint u3)                              ;; [3 bps] => 0.03% - max asset reward/loss per log-reward call
-(define-data-var max-deviation uint u5)                           ;; [5 bps] => 0.05% - max share price deviation per update
-(define-data-var max-slippage uint u500)                          ;; [500 bps] => 5.00% - max slippage for asset trades
-(define-data-var reserve-rate uint u500)                          ;; [500 bps] => 5.00% - reserve fund allocation rate from profits (log-reward)
-(define-data-var deposit-cap uint u0)                             ;; [8 decimals] - maximum total vault capacity
-(define-data-var min-deposit uint u100)                           ;; [8 decimals] - minimum deposit amount
-(define-data-var min-redeem uint u100)                            ;; [8 decimals] - minimum redeem amount
-(define-data-var cooldown uint u259200)                           ;; [259200 seconds] => 3 days - default redeem cooldown period
-(define-data-var express-cooldown uint u14400)                    ;; [14400 seconds] => 4 hours - express redeem cooldown period
-(define-data-var express-limit uint u250)                         ;; [250 bps] => 2.50% - express limit as bps of total share supply per window
-(define-data-var express-window uint u86400)                      ;; [86400 seconds] => 1 day - reset window for express limit
-(define-data-var update-window uint u86340)                       ;; [86340 seconds] => 23 hours and 59 minutes - min time between reward updates
-(define-data-var staleness-window uint u50)                       ;; [50 seconds] => ~50 seconds - price staleness check
+(define-data-var max-reward uint u5)
+(define-data-var max-deviation uint u7)
+(define-data-var max-slippage uint u500)
+(define-data-var reserve-rate uint u500)
+(define-data-var deposit-cap uint u100000000)
+(define-data-var min-deposit uint u100)
+(define-data-var min-redeem uint u100)
+(define-data-var cooldown uint u259200)
+(define-data-var express-cooldown uint u14400)
+(define-data-var express-limit uint u250)
+(define-data-var express-window uint u86400)
+(define-data-var update-window uint u86340)
+(define-data-var staleness-window uint u50)
 
 ;; Operational States
-(define-data-var vault-enabled bool true)                          ;; vault enabled/disabled flag
-(define-data-var transfer-enabled bool true)                       ;; vault asset transfers enabled/disabled flag (reserve, fee-collector)
-(define-data-var deposit-enabled bool true)                        ;; deposits enabled/disabled flag
-(define-data-var redeem-enabled bool true)                         ;; redeems enabled/disabled flag
-(define-data-var request-redeem-enabled bool true)                 ;; request-redeem enabled/disabled flag
-(define-data-var trading-enabled bool true)                        ;; trading enabled/disabled flag
-(define-data-var express-enabled bool false)                       ;; express redeems enabled/disabled flag
-(define-data-var express-limit-enabled bool true)                  ;; express limit enforcement enabled/disabled flag
-(define-data-var reward-enabled bool true)                         ;; rewards enabled/disabled flag
-(define-data-var swap-enabled bool true)                           ;; swap operations enabled/disabled flag
+(define-data-var vault-enabled bool true)
+(define-data-var transfer-enabled bool true)
+(define-data-var deposit-enabled bool true)
+(define-data-var redeem-enabled bool true)
+(define-data-var request-redeem-enabled bool true)
+(define-data-var trading-enabled bool true)
+(define-data-var express-enabled bool true)
+(define-data-var express-limit-enabled bool true)
+(define-data-var reward-enabled bool true)
+(define-data-var swap-enabled bool true)
 
 ;; Accounting Variables
-(define-data-var total-assets uint u0)                            ;; [8 decimals] - total assets in the reserve
-(define-data-var pending-fees uint u0)                            ;; [8 decimals] - total pending fees payable to protocol
-(define-data-var pending-rf uint u0)                              ;; [8 decimals] - total pending reserve fund payable to protocol
-(define-data-var claim-id uint u0)                                ;; [counter] - current claim ID
-(define-data-var last-log-ts uint u0)                             ;; [unix timestamp] - last reward log timestamp
+(define-data-var total-assets uint u0)
+(define-data-var pending-fees uint u0)
+(define-data-var pending-rf uint u0)
+(define-data-var claim-id uint u0)
+(define-data-var last-log-ts uint u0)
 
 ;; Express Limit Tracking Variables
-(define-data-var current-express-limit uint u0)                   ;; [8 decimals] - current available shares (hBTC) amount for express withdrawals
-(define-data-var last-express-ts uint u0)                         ;; [unix timestamp] - timestamp of last express limit reset
+(define-data-var current-express-limit uint u0)
+(define-data-var last-express-ts uint u0)
 
 ;;-------------------------------------
 ;; Maps
@@ -122,60 +125,60 @@
 ;; SIP-010 tokens the protocol can interact with
 (define-map assets
   {
-    address: principal                                            ;; token contract address
+    address: principal
   }
   {
-    active: bool,                                                 ;; asset enabled/disabled for trading
-    price-feed-id: (buff 32),                                     ;; [32 bytes] - Pyth price feed identifier
-    token-base: uint,                                             ;; [10^decimals] - token decimal base (e.g., 10^6, 10^8)
-    max-slippage: uint,                                           ;; [bps] - max swap slippage allowed for this asset
-    is-stablecoin: bool,                                          ;; whether asset is USD stablecoin (affects pricing logic)
+    active: bool,
+    price-feed-id: (buff 32),
+    token-base: uint,
+    max-slippage: uint,
+    is-stablecoin: bool,
   }
 )
 
-;; External contracts the protocol can interact with 
-(define-map externals 
+;; External contracts the protocol can interact with
+(define-map externals
   {
-    address: principal                                            ;; external contract address
+    address: principal
   }
   {
-    active: bool,                                                 ;; connection enabled/disabled
+    active: bool,
   }
 )
 
 (define-map custom-cooldown
-  { 
-    address: principal                                            ;; user address
+  {
+    address: principal
   }
   {
-    cooldown: uint                                                ;; [seconds] - custom cooldown period for this user
+    cooldown: uint
   }
 )
 
 (define-map custom-exit-fee
   {
-    address: principal                                            ;; user address
+    address: principal
   }
   {
-    exit-fee: uint                                                ;; [bps] - custom exit fee for this user
+    exit-fee: uint
   }
 )
 
-(define-map update-requests 
+(define-map update-requests
   {
-    type: (buff 1),                                               ;; [buff 1] - [0x01-0x7F] for vars, [0x80-0xFF] for maps
-    address: (optional principal)                                 ;; [optional principal] - [none] for vars, [principal] for maps
+    type: (buff 1),
+    address: (optional principal)
   }
   {
-    ts: uint,                                                     ;; [uint] - activation timestamp
-    value: (optional uint),                                       ;; [optional uint] - [uint] for vars, [none] for maps
-    is-add: bool,                                                 ;; [bool] - true for add operations, false for remove (only used for ASSET/EXTERNAL types)
-    asset-config: (optional {                                     ;; [optional tuple] - [some(config)] for ASSET add operations, [none] otherwise
+    ts: uint,
+    value: (optional uint),
+    is-add: bool,
+    asset-config: (optional {
       price-feed-id: (buff 32),
       token-base: uint,
       max-slippage: uint,
       is-stablecoin: bool
-    })                                                         
+    })
   }
 )
 
@@ -190,12 +193,11 @@
   )
     (if (> total-supply u0)
       (/ (* net-assets share-base) total-supply)
-      share-base  ;; 1:1 for first deposit
+      share-base
     )
   )
 )
 
-;; @desc - calculate how many shares (hBTC tokens) you'd get for a given asset amount
 (define-read-only (convert-to-shares (assets-in uint))
   (let (
     (net-assets (get-net-assets))
@@ -203,12 +205,11 @@
   )
     (if (> total-supply u0)
       (/ (* assets-in total-supply) net-assets)
-      assets-in ;; 1:1 for first deposit
+      assets-in
     )
   )
 )
 
-;; @desc - calculate how many assets (sBTC) a given number of shares is worth
 (define-read-only (convert-to-assets (shares uint))
   (/ (* shares (get-share-price)) share-base)
 )
@@ -241,7 +242,7 @@
   (var-get express-fee)
 )
 
-(define-read-only (get-total-assets)  
+(define-read-only (get-total-assets)
   (var-get total-assets)
 )
 
@@ -322,7 +323,7 @@
         (/ (* total-supply (get-express-limit)) bps-base)
         (var-get current-express-limit)
       )
-      total-supply) ;; return total supply when limit is disabled
+      total-supply)
     )
   )
     { shares: limit, assets: (convert-to-assets limit), reset-ts: reset-ts, enabled: (get-express-limit-enabled) }
@@ -383,8 +384,8 @@
 
 (define-read-only (get-asset (address principal))
   (let (
-    (asset-entry (default-to 
-      { active: false, price-feed-id: 0x, token-base: u0, max-slippage: u0, is-stablecoin: false } 
+    (asset-entry (default-to
+      { active: false, price-feed-id: 0x, token-base: u0, max-slippage: u0, is-stablecoin: false }
       (map-get? assets { address: address })))
     (global-max (get-max-slippage))
     (asset-max (get max-slippage asset-entry))
@@ -403,8 +404,8 @@
 
 (define-read-only (get-external (address principal))
   (get active
-    (default-to 
-      { active: false } 
+    (default-to
+      { active: false }
       (map-get? externals { address: address })
     )
   )
@@ -444,17 +445,14 @@
 ;; Batch State Getters (Optimization)
 ;;-------------------------------------
 
-;; @desc - Batch getter for controller reward operations
 (define-read-only (get-reward-state)
   { total-assets: (get-total-assets), net-assets: (get-net-assets), fees: (get-fees), pending-rf: (get-pending-rf), reserve-rate: (get-reserve-rate) }
 )
 
-;; @desc - Batch getter for deposit operation 
 (define-read-only (get-deposit-state (assets-in uint))
   { shares: (convert-to-shares assets-in), net-assets: (get-net-assets), deposit-cap: (get-deposit-cap), min-deposit: (get-min-deposit) }
 )
 
-;; @desc - Batch getter for redeem operation 
 (define-read-only (get-redeem-state (user principal) (is-express bool))
   { share-price: (get-share-price), exit-fee: (get-custom-exit-fee user is-express), cooldown: (get-custom-cooldown user is-express), min-redeem: (get-min-redeem), redeem-enabled: (get-redeem-enabled), request-redeem-enabled: (get-request-redeem-enabled) }
 )
@@ -536,12 +534,12 @@
 (define-read-only (check-max-deviation (old-price uint) (new-price uint) (share-supply uint))
   (let (
     (threshold (get-max-deviation))
-    (abs-diff (if (> new-price old-price) 
-                  (- new-price old-price) 
+    (abs-diff (if (> new-price old-price)
+                  (- new-price old-price)
                   (- old-price new-price)))
     (deviation (if (> share-supply u0)
                   (/ (* abs-diff bps-base) old-price)
-                  u0))  ;; Handle edge case of last redeem
+                  u0))
   )
     (ok (asserts! (<= deviation threshold) ERR_DEVIATION))
   )
@@ -592,7 +590,6 @@
   )
 )
 
-;; @desc - Helper to validate external contracts and assets
 (define-read-only (check-externals-and-assets (address-1 principal) (address-2 (optional principal)) (asset-1 (optional principal)) (asset-2 (optional principal)))
   (begin
     (try! (check-is-external address-1))
@@ -603,7 +600,7 @@
 )
 
 ;;-------------------------------------
-;; Protocol/Internal State Updates
+;; Internal State Updates
 ;;-------------------------------------
 
 (define-private (update-total-assets (amount uint) (is-add bool))
@@ -621,8 +618,8 @@
   (let (
     (new-supply (if is-add (+ current-supply amount) (- current-supply amount)))
   )
-    (if is-add 
-      (try! (contract-call? .hbtc-token mint-for-protocol amount user)) 
+    (if is-add
+      (try! (contract-call? .hbtc-token mint-for-protocol amount user))
       (try! (contract-call? .hbtc-token burn-for-protocol amount user)))
     (print { action: "update-shares", data: { old: current-supply, new: new-supply, user: user, is-add: is-add } })
     (ok new-supply)
@@ -658,8 +655,7 @@
   )
 )
 
-;; Helper to execute a single update operation
-(define-private (execute-update 
+(define-private (execute-update
   (op { type: (string-ascii 14), amount: uint, is-add: bool })
   (prev (response bool uint)))
   (begin
@@ -674,7 +670,7 @@
   )
 )
 
-(define-public (update-state 
+(define-public (update-state
   (operations (list 10 { type: (string-ascii 14), amount: uint, is-add: bool }))
   (reward (optional { reward: uint, is-add: bool }))
   (shares (optional { amount: uint, is-add: bool, user: principal })))
@@ -685,16 +681,14 @@
   )
     (try! (contract-call? .hq-hbtc check-is-protocol contract-caller))
     (asserts! (> (len operations) u0) ERR_NO_OPERATIONS)
-    
-    ;; Execute all operations
+
     (try! (fold execute-update operations (ok true)))
-    
+
     (let ((post-share-supply
         (match shares
           data (try! (update-shares (get amount data) (get is-add data) (get user data) current-share-supply))
           current-share-supply))
     )
-      ;; Optionally handle commit-reward logic
       (match reward
         data (begin
           (try! (check-max-reward (get reward data)))
@@ -702,7 +696,7 @@
           (asserts! (> (unwrap-panic (contract-call? .hbtc-token get-total-supply)) u0) ERR_ZERO_SUPPLY)
           (unwrap-panic (update-total-assets (get reward data) (get is-add data)))
           (update-last-log-ts)
-          (print { action: "commit-reward", user: contract-caller, data: { 
+          (print { action: "commit-reward", user: contract-caller, data: {
             share-price: { old: init-share-price, new: (get-share-price) },
             total-assets: { old: init-total-assets, new: (get-total-assets) },
             reward: data,
@@ -710,13 +704,12 @@
           } })
           true)
         true)
-      
-      ;; Check share price deviation after all updates
+
       (let (
         (new-share-price (get-share-price))
       )
         (try! (check-max-deviation init-share-price new-share-price post-share-supply))
-        
+
         (print { action: "update-state", user: contract-caller, data: { operations: operations, shares: shares, share-price: { old: init-share-price, new: new-share-price } } })
         (ok true)
       ))
@@ -739,7 +732,6 @@
 ;; Express Limit Helpers
 ;;-------------------------------------
 
-;; @desc - Consume express limit when express claim is created
 (define-private (consume-express-limit (shares uint))
   (let (
     (is-reset (if (>= stacks-block-time (+ (get-last-express-ts) (get-express-window))) true false))
@@ -755,11 +747,10 @@
         (if is-reset (var-set last-express-ts stacks-block-time) true)
         (var-set current-express-limit (- limit shares))
         (ok true))
-      (ok true) ;; if not hq, no limit consumption
+      (ok true)
     )
   )
 )
-
 
 ;;-------------------------------------
 ;; Timelocked Update Helpers
@@ -825,12 +816,12 @@
   (if (is-eq type PERF_FEE) (var-set perf-fee val)
   (if (is-eq type EXIT_FEE) (var-set exit-fee val)
   (if (is-eq type EXPRESS_FEE) (var-set express-fee val)
-  false))))))))))))) ;; if no match, return false
+  false)))))))))))))
 )
 
-(define-private (execute-map-update 
-  (type (buff 1)) 
-  (addr principal) 
+(define-private (execute-map-update
+  (type (buff 1))
+  (addr principal)
   (is-add bool)
   (asset-config (optional { price-feed-id: (buff 32), token-base: uint, max-slippage: uint, is-stablecoin: bool})))
   (if (and (is-eq type ASSET) is-add)
@@ -843,8 +834,8 @@
     (map-set externals { address: addr } { active: true })
   (if (and (is-eq type EXTERNAL) (not is-add))
     (map-delete externals { address: addr })
-  false)))) ;; if no match, return false
-) 
+  false))))
+)
 
 (define-private (confirm-update (type (buff 1)) (address (optional principal)))
   (let (
@@ -873,7 +864,6 @@
   (confirm-update type (some address))
 )
 
-;; Var updates
 (define-public (request-max-reward-update (new-value uint))
   (begin
     (asserts! (<= new-value bps-base) ERR_ABOVE_MAX)
@@ -906,7 +896,7 @@
   (begin
     (asserts! (<= new-value (get cooldown max)) ERR_ABOVE_MAX)
     (asserts! (>= new-value (get-express-cooldown)) ERR_BELOW_MIN)
-    ;; Also check against pending express cooldown if exists
+
     (match (get-update-request-var EXPRESS_COOLDOWN)
       entry (asserts! (>= new-value (unwrap-panic (get value entry))) ERR_BELOW_MIN)
       no-entry true
@@ -918,7 +908,7 @@
 (define-public (request-express-cooldown-update (new-value uint))
   (begin
     (asserts! (<= new-value (get-cooldown)) ERR_ABOVE_MAX)
-    ;; Also check against pending cooldown if exists
+
     (match (get-update-request-var COOLDOWN)
       entry (asserts! (<= new-value (unwrap-panic (get value entry))) ERR_INVALID)
       no-entry true
@@ -966,7 +956,7 @@
   (begin
     (asserts! (<= new-value (get exit-fee max)) ERR_ABOVE_MAX)
     (asserts! (<= new-value (var-get express-fee)) ERR_INVALID)
-    ;; Also check pending express-fee update if exists
+
     (match (get-update-request-var EXPRESS_FEE)
       entry (asserts! (<= new-value (unwrap-panic (get value entry))) ERR_FEE_CONFLICT)
       no-entry true
@@ -979,7 +969,7 @@
   (begin
     (asserts! (<= new-value (get express-fee max)) ERR_ABOVE_MAX)
     (asserts! (>= new-value (var-get exit-fee)) ERR_INVALID)
-    ;; Also check pending exit-fee update if exists
+
     (match (get-update-request-var EXIT_FEE)
       entry (asserts! (>= new-value (unwrap-panic (get value entry))) ERR_FEE_CONFLICT)
       no-entry true
@@ -1082,7 +1072,7 @@
   (let (
     (last-ts (get-last-log-ts))
   )
-    ;; Window restriction: mgmt-fee can only be changed within 1 hour after rewards
+
     (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
     (confirm-var-update MGMT_FEE)
   )
@@ -1092,7 +1082,7 @@
   (let (
     (last-ts (get-last-log-ts))
   )
-    ;; Window restriction: perf-fee can only be changed within 1 hour after rewards
+
     (asserts! (or (<= stacks-block-time (+ last-ts one-hour)) (is-eq last-ts u0)) ERR_FEE_WINDOW)
     (confirm-var-update PERF_FEE)
   )
@@ -1107,7 +1097,7 @@
 )
 
 ;;-------------------------------------
-;; Asset updates
+;; Asset Updates
 ;;-------------------------------------
 
 (define-public (request-asset-add (token <ft>) (price-feed-id (buff 32)) (decimals uint) (asset-max-slippage uint) (is-stablecoin bool))
@@ -1144,7 +1134,7 @@
 )
 
 ;;-------------------------------------
-;; External updates
+;; External Updates
 ;;-------------------------------------
 
 (define-public (request-external-add (address principal))
@@ -1201,9 +1191,9 @@
 
 (define-private (set-custom-exit-fee-iter (entry { address: principal, new-exit-fee: uint }) (prev (response bool uint)))
   (let (
-    (address (get address entry))
-    (new-exit-fee (get new-exit-fee entry))
-  )
+      (address (get address entry))
+      (new-exit-fee (get new-exit-fee entry))
+    )
     (try! prev)
     (asserts! (<= new-exit-fee (get exit-fee max)) ERR_ABOVE_MAX)
     (print { action: "set-custom-exit-fee-iter", user: contract-caller, data: { address: address, old: (get-custom-exit-fee address false), new: new-exit-fee } })
@@ -1249,7 +1239,7 @@
   )
 )
 
-(define-public (set-deposit-cap (new-deposit-cap uint))  
+(define-public (set-deposit-cap (new-deposit-cap uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-owner contract-caller))
     (print { action: "set-deposit-cap", user: contract-caller, data: { old: (get-deposit-cap), new: new-deposit-cap } })

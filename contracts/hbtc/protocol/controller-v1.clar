@@ -1,3 +1,6 @@
+;; SPDX-License-Identifier: BUSL-1.1
+;; Copyright (c) 2026 Hermetica Labs, Inc.
+
 ;; @contract Controller
 ;; @version 1
 ;; @description Reward distribution logic
@@ -10,8 +13,8 @@
 (define-constant ERR_INSUFFICIENT_FUNDS (err u104002))
 (define-constant ERR_NO_PENDING_TRANSFERS (err u104003))
 
-(define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
-(define-constant pct-base u100)                                 ;; 10^2 = 100 (percentage base)
+(define-constant bps-base u10000)
+(define-constant pct-base u100)
 (define-constant fee-collector .fee-collector)
 (define-constant rf .reserve-fund)
 (define-constant reserve .reserve)
@@ -21,7 +24,6 @@
 ;; Rewarder
 ;;-------------------------------------
 
-;; @desc - log the reward and update the token price
 (define-public (log-reward (reward uint) (is-positive bool))
   (let (
     (state (contract-call? .state get-reward-state))
@@ -35,7 +37,7 @@
     (is-profit (and is-positive (>= reward total-fees)))
     (req-rf (if is-profit
       u0
-      (if is-positive 
+      (if is-positive
         (- mgmt-fee reward)
         (+ mgmt-fee reward))))
     (total-rf (+ (get-sbtc-balance rf) pending-rf))
@@ -47,15 +49,9 @@
     (asserts! (or (> reward u0) is-positive) ERR_ZERO_ONLY_POSITIVE)
 
     (if is-profit
-      ;; Handle profit and zero scenario -> token price increases
       (try! (handle-profit reward total-rf pending-rf perf-fee mgmt-fee reserve-rate))
-      
-      ;; Handle loss scenarios
       (if (<= req-rf total-rf)
-          ;; Reserve-fund can cover the loss -> token price does not change
           (try! (handle-loss-covered reward is-positive total-rf pending-rf mgmt-fee))
-
-          ;; Reserve-fund cannot cover the loss -> token price decreases
           (try! (handle-loss-exceeds reward is-positive total-rf pending-rf req-rf u0 mgmt-fee))
         )
     )
@@ -144,7 +140,7 @@
     
     ;; Physical transfer if needed
     (if (> transfer-amount u0)
-      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve none))
+      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve))
       true
     )
     
@@ -184,7 +180,7 @@
     })
 
     (if (> transfer-amount u0)
-      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve none))
+      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve))
       true
     )
 
