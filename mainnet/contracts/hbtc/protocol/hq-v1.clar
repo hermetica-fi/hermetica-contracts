@@ -49,7 +49,7 @@
 
 (define-data-var protocol-enabled bool true)
 
-(define-data-var timelock uint u86400)
+(define-data-var timelock uint u10)
 (define-data-var next-timelock
   {
     duration: uint,                                           ;; [uint] - timelock duration in seconds
@@ -325,7 +325,6 @@
     (is-active (get active (get-role address type)))
   )
     (try! (check-is-owner contract-caller))
-    (try! (check-is-standard address))
     (asserts! (and (>= type 0x01) (<= type 0x06)) ERR_INVALID_ROLE)
     (if is-add
       (asserts! (not is-active) ERR_DUPLICATE)

@@ -5,9 +5,9 @@
 ;; @version 1
 ;; @description Zest v2 interface for lending/borrowing
 
-(use-trait ft 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.ft-trait.ft-trait)
-(use-trait zest-market .zest-market-trait-v1.zest-market-trait)
-(use-trait zest-vault .zest-vault-trait-v1.zest-vault-trait)
+(use-trait ft 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.ft-trait.ft-trait)
+(use-trait zest-market 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.market-trait.market-trait)
+(use-trait zest-vault 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-traits.tokenized-vault)
 
 (define-constant ERR_INVALID_AMOUNT (err u111001))
 

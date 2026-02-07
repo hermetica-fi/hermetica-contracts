@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(find:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "WebFetch(domain:www.clarigen.dev)",
+      "WebFetch(domain:docs.stacks.co)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl:*)",
+      "Bash(npm run clarigen:*)",
+      "Bash(npm test:*)",
+      "Bash(clarinet check:*)",
+      "Bash(npx clarinet:*)",
+      "Bash(npx clarigen:*)",
+      "Bash(npm run test:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(pdftotext:*)"
+    ]
+  }
+}
