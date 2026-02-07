@@ -6,4 +6,7 @@ history.txt
 .DS_Store
 .DStore
 node_modules/
-local-testing/tests/clarigen-types.ts
+**/clarigen-types.ts
+local-testing/coverage/
+local-testing/coverage-temp/
+lcov.info

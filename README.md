@@ -1,6 +1,6 @@
 # Hermetica hBTC Protocol
 
-Hermetica hBTC is a **yield-bearing Bitcoin wrapper** on Stacks. Users deposit sBTC and receive hBTC shares representing their proportional claim on the protocol's assets. The protocol generates yield through **DeFi integrations** with Zest Protocol (lending/borrowing) and Hermetica USDh (staking), while maintaining **instant liquidity** through express redemptions.
+Hermetica hBTC is a Bitcoin yield vault written in Clarity with ERC-4626-style share mint/redeem, daily NAV updates, and strategy execution via external protocol integrations.
 
 ### 🌐 mainnet/
 Production deployment information including:
@@ -86,7 +86,7 @@ For security research, focus on:
 | Contract | Purpose |
 |----------|---------|
 | `vault-v1.clar` | Core deposit/redeem logic, claim management |
-| `controller-v1.clar` | Orchestrates operations, share price calculation, fee distribution |
+| `controller-v1.clar` | Reward distribution, fee accounting, reserve fund loss handling |
 | `state-v1.clar` | Protocol state (caps, cooldowns, assets, share tracking) |
 | `hq-v1.clar` | Role-based access control with timelock |
 | `reserve-v1.clar` | Holds protocol assets (sBTC) |
@@ -100,9 +100,9 @@ For security research, focus on:
 
 | Contract | Integration | Purpose |
 |----------|-------------|---------|
-| `zest-interface-v1.clar` | Zest Protocol v2 | Collateral management, borrowing USDh |
-| `hermetica-interface-v1.clar` | Hermetica USDh | Stake/unstake sUSDh for yield |
-| `granite-interface-v1.clar` | Granite Protocol | Additional borrowing options |
+| `zest-interface-v1.clar` | Zest Protocol v2 | Collateral management, borrowing stablecoins |
+| `hermetica-interface-v1.clar` | Hermetica USDh | Stake/unstake sUSDh for yield, mint/redeem USDh |
+| `granite-interface-v1.clar` | Granite Protocol | Collateral management, borrowing stablecoins |
 
 ## Protocol Flows
 

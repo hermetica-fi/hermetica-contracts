@@ -1,5 +1,93 @@
 # Audit reports
 
+## hBTC
+
+| Date | Auditor | Report PDF | Init commit hash |
+| ----------- | ------ | --------- | -------- |
+| 01/2026 | [Clarity Alliance](https://www.clarityalliance.org/reports/hermetica-vaults) | [hBTC Vaults](https://2201013687-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2Fxp26OjT5H1o55M1QMDI4%2Fuploads%2Fz6sXMobZdjJnWSset9Kj%2FHermetica%20x%20Clarity%20Alliance%20-%20Audit%20Report%20Jan2026.pdf?alt=media&token=0f26dbe9-6189-4f72-a9fd-a505276feb7f) | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/43fff97fdecd8c3a2c2fc5b6070967fad4aac28f) |
+| 11/2025 | [Greybeard Security](https://github.com/greybeard-security/audit-reports) | [hBTC Vaults](https://2201013687-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2Fxp26OjT5H1o55M1QMDI4%2Fuploads%2FACnCzgFKXCPj7rtBsNqy%2FHermetica%20x%20Greybeard%20-%20Audit%20Report%20Nov2025.pdf?alt=media&token=9ebe8612-084e-4b49-846d-262049dc3950) | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/7ceb2b6adf7b59510684428bcd8c4d07d051c627) |
+
+### hBTC Vaults Remediations (Clarity Alliance - 01/2026)
+
+| ID | Title | Severity | Status |
+| ------ | --------------------------------------------- | -------- | ----------- |
+| H-01 | Incorrect Performance Fee Calculation Leads To Unaccounted Rewards | High | Resolved |
+| H-02 | Reward Profit Handling Is Incorrect | High | Resolved |
+| H-03 | Excess Loss Handling Is Incorrect | High | Resolved |
+| H-04 | Covered Loss Handling Is Incorrect | High | Resolved |
+| M-01 | Vault Withdrawal Share Rounding Favors Users Over the Protocol | Medium | Resolved |
+| M-02 | Malicious Trader Can Drain Removable Zest Collateral | Medium | Resolved |
+| M-03 | Premature Share Price Snapshot Leads to Unbacked Pending Claims | Medium | Resolved |
+| M-04 | Vault Cannot Be Emptied After Share Price Divergence | Medium | Resolved |
+| M-05 | Updated Management And Performance Fees Are Applied Retroactively | Medium | Resolved |
+| M-06 | hBTC Token Is Not SIP-10 Compliant | Medium | Resolved |
+| M-07 | hBTC Public Share Burning Enables a First-Deposit DoS Attack Variant | Medium | Resolved |
+| M-08 | Maximum and Minimum Cap Limitations May Endanger the Protocol | Medium | Resolved |
+| M-09 | Tokens With tx-sender-Based Authorization Are Not Fully Supported | Medium | Resolved |
+| M-10 | STX Integration Issues Due to Clarity 4 Security Constraints | Medium | Resolved |
+| L-01 | Incomplete Blacklist Flow | Low | Acknowledged |
+| L-02 | Missing Reset Mechanism for Custom Parameters | Low | Resolved |
+| L-03 | Management Fee Overstated by Using Total Assets | Low | Resolved |
+| L-04 | Missing Explicit Validation for is-express Parameters | Low | Resolved |
+| L-05 | Vault withdraw-many Functionality Is Brittle | Low | Resolved |
+| L-06 | hBTC Token Name Should Not Be Changeable | Low | Partially Resolved |
+| L-07 | Reward Distribution Should Not Be Allowed After the Vault Has Been Emptied | Low | Resolved |
+| L-08 | Positive Slippage Remains in the Hermetica Interface Contract After a Mint | Low | Resolved |
+| L-09 | Race Condition During Fund Transfers Due to Rewarder Role Ambiguity | Low | Resolved |
+| L-10 | Admin Should Not Be Able To Change Price Staleness Threshold | Low | Resolved |
+| L-11 | Exit Fee Transfers Should Not Be Bound To Vault Status | Low | Resolved |
+| L-12 | Missing Transfer Authorization Check in Reserve Fund Transfer | Low | Resolved |
+| L-13 | Max Slippage Can Be Set for Arbitrary Assets | Low | Resolved |
+| L-14 | Security Enhancements in Case of Ownership Compromise | Low | Resolved |
+| L-15 | Unnecessary Token Allowance on Zest Operations With No Outflows | Low | Resolved |
+| L-16 | Repaying Zest Debt May Leave Dust in the Interface | Low | Resolved |
+| L-17 | Loose Token Allowances on Zest Market Interface Calls | Low | Resolved |
+| QA-01 | Unnecessary External Call for is-standard Verification | QA | Acknowledged |
+| QA-02 | Current Owner Can Claim Ownership Multiple Times | QA | Resolved |
+| QA-03 | Current Owner Can Request Next Ownership to Himself | QA | Resolved |
+| QA-04 | Incorrect Reuse of ERR_NOT_OWNER Code When Claiming Ownership | QA | Resolved |
+| QA-05 | Incorrect Event Action Name for request-new-admin Function | QA | Resolved |
+| QA-06 | Optimize Double Timestamp Retrieval | QA | Resolved |
+| QA-07 | Hardcode Constants Instead of Computing at Runtime | QA | Resolved |
+| QA-08 | Zest Interface Contract Can Be Slightly Improved | QA | Resolved |
+| QA-09 | Excessive Price Feed Updates in Trading Interface | QA | Resolved |
+| QA-10 | Trading Interface: Ambiguous Function Naming Convention | QA | Resolved |
+| QA-11 | Trading Interface Can Be Optimized | QA | Resolved |
+| QA-12 | Vault Deposit Cap Consideration | QA | Resolved |
+| QA-13 | Management Fee Max Amount Implementation - Documentation Discrepancy | QA | Resolved |
+| QA-14 | Vault Contract Can Be Slightly Improved | QA | Resolved |
+| QA-15 | First Depositor Inflation Attack Considerations | QA | Resolved |
+| QA-16 | Add Vault Action Preview Functions | QA | Resolved |
+| QA-17 | Codebase Print Statements Improvements | QA | Resolved |
+| QA-18 | Miscellaneous Codebase Improvements | QA | Resolved |
+| QA-19 | Hermetica Interface Mint Asset Transfer Restriction Can Be Improved | QA | Resolved |
+| QA-20 | Use the Recipient Feature of the Zest Market Interface | QA | Resolved |
+| QA-21 | Use Zest Market Bundle Operations | QA | Resolved |
+
+### hBTC Vaults Remediations (Greybeard Security - 11/2025)
+
+| ID | Title | Severity | Status |
+| ------ | --------------------------------------------- | -------- | ----------- |
+| M-1 | Blacklisting should be handled at the level of the hBTC token | Medium | Resolved |
+| M-2 | Lack of mechanism to cancel claim requests | Medium | Resolved |
+| M-3 | Blacklist can be bypassed in a certain scenario | Medium | Resolved |
+| L-1 | Blacklist should also be checked in redeem-internal | Low | Resolved |
+| L-2 | The trading-v1 contracts do not check usdh-token-trait | Low | Resolved |
+| L-3 | Activation delay can be bypassed | Low | Resolved |
+| L-4 | process-claim should not allow zero assets claims | Low | Resolved |
+| L-5 | Rounding direction of convert-to-shares is in favour of user not protocol | Low | Resolved |
+| L-6 | Precision loss allows for a share price increase after funding a claim | Low | Resolved |
+| I-1 | controller-v1.handle-profit doesn't use or require is-positive parameter | Informational | Resolved |
+| I-2 | handle-loss-covered/exceeds can be simplified | Informational | Resolved |
+| I-3 | zest-close can repay less than expected | Informational | Resolved |
+| I-4 | sbtc's get-balance does not return available balance | Informational | Acknowledged |
+| I-5 | zest-deposit and zest-redeem refactor | Informational | Resolved |
+| I-6 | Remove unnecessary calls to as-contract | Informational | Resolved |
+| I-7 | Consider minimum redeem sizes to avoid potential attacks based on small amounts | Informational | Resolved |
+| I-8 | Inequivalence between fund-claim and fund-claim-many | Informational | Resolved |
+
+## USDh
+
 | Date | Auditor | Report PDF | Init commit hash |
 | ----------- | ------ | --------- | -------- |
 | 09/2025 | [Clarity Alliance](https://www.clarityalliance.org/hermetica-usdh-upgrade) | [Staking-v1-1](https://clarity-alliance.github.io/audits/Clarity%20Alliance%20-%20Hermetica%20USDh%20(Upgrade).pdf)| [Link](https://github.com/hermetica-fi/hermetica-contracts/commit/1b9a84f91204ed326952d0d1e0adc464df5c7a52) |
@@ -114,5 +202,4 @@ This procedure ensures that the vault always maintains a minimum share balance, 
 
 ## Documentation
 
-- https://hermetica.gitbook.io/hermetica-tech-docs
 - https://docs.hermetica.fi/
