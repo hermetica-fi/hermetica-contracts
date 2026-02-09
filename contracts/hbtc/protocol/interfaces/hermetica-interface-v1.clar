@@ -90,7 +90,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of staking) (some (contract-of staking-silo)) none none))
     (try! (contract-call? staking-silo withdraw claim-id))
-    (try! (contract-call? 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1 transfer usdh-amount current-contract reserve none))
+    (try! (contract-call? .usdh-token transfer usdh-amount current-contract reserve none))
     (print { action: "hermetica-unstake-and-withdraw", user: contract-caller, data: { susdh-amount: amount, usdh-received: usdh-amount, ratio: ratio, staking: staking, staking-silo: staking-silo, claim-id: claim-id } })
     (ok usdh-amount)
   )
@@ -116,7 +116,6 @@
     (minting-asset-data (contract-call? .state get-asset minting-asset-contract))
     (max-slippage (get max-slippage minting-asset-data))
     (slippage-tolerance (if (< max-slippage slippage-tolerance-input) max-slippage slippage-tolerance-input))
-
     (pre-balance (unwrap-panic (contract-call? minting-asset get-balance current-contract)))
   )
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))

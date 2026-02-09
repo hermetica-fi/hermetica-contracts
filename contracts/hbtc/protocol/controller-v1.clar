@@ -109,7 +109,6 @@
       user: contract-caller,
       data: { case: (if (is-eq reward-after-fees u0) "zero" "profit"), reward: { gross: reward, net: reward-net, rf: reward-rf, is-positive: true, is-add: true }, fees: { perf: perf-fee, mgmt: mgmt-fee }, rf: { old: total-rf, new: (+ total-rf reward-rf), required: reward-rf } }
     })
-    ;; Single batch call with commit-reward logic
     (ok (try! (contract-call? .state update-state 
       (list
         { type: "pending-fees", amount: total-fees, is-add: true }
@@ -119,7 +118,6 @@
   )
 )
 
-;; @desc - Handle loss covered by reserve fund
 (define-private (handle-loss-covered 
   (reward uint) (is-positive bool)
   (total-rf uint) (pending-rf uint)
@@ -138,13 +136,11 @@
       data: { case: "loss-covered", reward: { gross: reward, net: (get asset-delta delta), rf: transfer-amount, is-positive: is-positive, is-add: (get is-add delta) }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: (- total-rf req-rf), required: req-rf } }
     })
     
-    ;; Physical transfer if needed
     (if (> transfer-amount u0)
       (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve))
       true
     )
     
-    ;; Single batch call with commit-reward logic (net reward = 0)
     (try! (contract-call? .state update-state 
       (list
         { type: "pending-rf", amount: pending-rf-decrease, is-add: false }
