@@ -241,8 +241,8 @@ epoch = 3.3
 
 # hbtc tokens
 
-[contracts.hbtc-token]
-path = 'contracts/hbtc/tokens/hbtc-token.clar'
+[contracts.token-hbtc]
+path = 'contracts/hbtc/tokens/token-hbtc.clar'
 clarity_version = 4
 epoch = 3.3
 

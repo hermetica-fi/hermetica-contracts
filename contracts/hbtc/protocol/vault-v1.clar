@@ -95,7 +95,7 @@
     (new-claim-id (try! (contract-call? .state increment-claim-id)))
     (ts (+ stacks-block-time cooldown))
   )
-    (try! (contract-call? .hbtc-token transfer shares contract-caller current-contract none))
+    (try! (contract-call? .token-hbtc transfer shares contract-caller current-contract none))
 
     (map-set claims { claim-id: new-claim-id }
       {
@@ -191,7 +191,7 @@
     (asserts! (not (get is-express claim)) ERR_NOT_ALLOWED)
     (try! (contract-call? .blacklist check-is-not-soft claim-user))
 
-    (try! (contract-call? .hbtc-token transfer shares current-contract claim-user none))
+    (try! (contract-call? .token-hbtc transfer shares current-contract claim-user none))
     (map-delete claims { claim-id: claim-id })
     (print { action: "cancel-redeem", user: contract-caller, data: { claim-id: claim-id, shares: shares } })
     (ok shares)

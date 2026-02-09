@@ -189,7 +189,7 @@
 (define-read-only (get-share-price)
   (let (
     (net-assets (get-net-assets))
-    (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+    (total-supply (unwrap-panic (contract-call? .token-hbtc get-total-supply)))
   )
     (if (> total-supply u0)
       (/ (* net-assets share-base) total-supply)
@@ -201,7 +201,7 @@
 (define-read-only (convert-to-shares (assets-in uint))
   (let (
     (net-assets (get-net-assets))
-    (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+    (total-supply (unwrap-panic (contract-call? .token-hbtc get-total-supply)))
   )
     (if (> total-supply u0)
       (/ (* assets-in total-supply) net-assets)
@@ -317,7 +317,7 @@
 (define-read-only (get-effective-express-limit)
   (let (
     (reset-ts (+ (get-last-express-ts) (get-express-window)))
-    (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+    (total-supply (unwrap-panic (contract-call? .token-hbtc get-total-supply)))
     (limit (if (get-express-limit-enabled)
       (if (>= stacks-block-time reset-ts)
         (/ (* total-supply (get-express-limit)) bps-base)
@@ -619,8 +619,8 @@
     (new-supply (if is-add (+ current-supply amount) (- current-supply amount)))
   )
     (if is-add
-      (try! (contract-call? .hbtc-token mint-for-protocol amount user))
-      (try! (contract-call? .hbtc-token burn-for-protocol amount user)))
+      (try! (contract-call? .token-hbtc mint-for-protocol amount user))
+      (try! (contract-call? .token-hbtc burn-for-protocol amount user)))
     (print { action: "update-shares", data: { old: current-supply, new: new-supply, user: user, is-add: is-add } })
     (ok new-supply)
   )
@@ -677,7 +677,7 @@
   (let (
     (init-share-price (get-share-price))
     (init-total-assets (get-total-assets))
-    (current-share-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+    (current-share-supply (unwrap-panic (contract-call? .token-hbtc get-total-supply)))
   )
     (try! (contract-call? .hq-hbtc check-is-protocol contract-caller))
     (asserts! (> (len operations) u0) ERR_NO_OPERATIONS)
@@ -693,7 +693,7 @@
         data (begin
           (try! (check-max-reward (get reward data)))
           (try! (check-update-window))
-          (asserts! (> (unwrap-panic (contract-call? .hbtc-token get-total-supply)) u0) ERR_ZERO_SUPPLY)
+          (asserts! (> (unwrap-panic (contract-call? .token-hbtc get-total-supply)) u0) ERR_ZERO_SUPPLY)
           (unwrap-panic (update-total-assets (get reward data) (get is-add data)))
           (update-last-log-ts)
           (print { action: "commit-reward", user: contract-caller, data: {
@@ -735,7 +735,7 @@
 (define-private (consume-express-limit (shares uint))
   (let (
     (is-reset (if (>= stacks-block-time (+ (get-last-express-ts) (get-express-window))) true false))
-    (total-supply (unwrap-panic (contract-call? .hbtc-token get-total-supply)))
+    (total-supply (unwrap-panic (contract-call? .token-hbtc get-total-supply)))
     (limit (if is-reset
       (/ (* total-supply (get-express-limit)) bps-base)
       (get-current-express-limit)))
