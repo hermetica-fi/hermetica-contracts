@@ -16,7 +16,7 @@
 (define-constant token-symbol "hBTC")
 
 (define-data-var token-name (string-ascii 32) "hBTC")
-(define-data-var token-uri (string-utf8 256) u"https://ipfs.io/ipfs/bafkreibujsyn7cu4us52nbqkrt2pomypjmofxuv6xxz55sy6yz4y43xyzq")
+(define-data-var token-uri (string-utf8 256) u"")
 (define-data-var blacklist-enabled bool true)
 
 ;;-------------------------------------

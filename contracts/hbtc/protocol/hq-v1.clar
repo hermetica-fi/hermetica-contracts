@@ -61,14 +61,14 @@
   }
 )
 
-(define-data-var owner principal 'SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT)
+(define-data-var owner principal tx-sender)
 (define-data-var next-owner
   {
     address: principal,
     ts: uint
   }
   {
-    address: 'SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT,
+    address: tx-sender,
     ts: (+ stacks-block-time (get-timelock))
   }
 )

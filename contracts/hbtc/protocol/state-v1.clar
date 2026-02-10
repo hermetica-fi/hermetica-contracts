@@ -74,7 +74,7 @@
 ;;-------------------------------------
 
 ;; Fee Settings
-(define-data-var fee-address principal 'SPNPZKNY20QNMQM1AX8GG5YV2MGXZ9TBVB2KXFCN)
+(define-data-var fee-address principal tx-sender)
 (define-data-var mgmt-fee uint u0)
 (define-data-var perf-fee uint u1000)
 (define-data-var exit-fee uint u0)
