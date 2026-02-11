@@ -44,7 +44,7 @@ export const vault = contracts.vault;
 export const state = contracts.state;
 export const controllerHbtc = contracts.controllerHbtc;
 export const hqHbtc = contracts.hqHbtc;
-export const hbtcToken = contracts.hbtcToken;
+export const hbtcToken = contracts.tokenHbtc;
 export const reserve = contracts.reserve;
 export const reserveFund = contracts.reserveFund;
 export const feeCollector = contracts.feeCollector;
@@ -115,13 +115,15 @@ export const ERR = {
   // state errors (102xxx)
   DEPOSIT_DISABLED: 102_005n,
   REDEEM_DISABLED: 102_006n,
-  TRADING_DISABLED: 102_007n,
-  ABOVE_MAX: 102_008n,
-  DEVIATION: 102_009n,
-  WINDOW_CLOSED: 102_010n,
-  EXPRESS_DISABLED: 102_017n,
-  LIMIT_EXCEEDED: 102_020n,
-  REWARD_DISABLED: 102_021n,
+  REQUEST_REDEEM_DISABLED: 102_007n,
+  TRADING_DISABLED: 102_008n,
+  ABOVE_MAX: 102_009n,
+  STATE_BELOW_MIN: 102_010n,
+  WINDOW_CLOSED: 102_011n,
+  DEVIATION: 102_014n,
+  EXPRESS_DISABLED: 102_018n,
+  LIMIT_EXCEEDED: 102_021n,
+  REWARD_DISABLED: 102_022n,
 
   // hq-hbtc errors (101xxx)
   NOT_OWNER: 101_001n,
