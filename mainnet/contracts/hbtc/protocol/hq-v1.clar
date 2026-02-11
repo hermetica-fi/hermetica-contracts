@@ -49,7 +49,7 @@
 
 (define-data-var protocol-enabled bool true)
 
-(define-data-var timelock uint u10)
+(define-data-var timelock uint u86400)
 (define-data-var next-timelock
   {
     duration: uint,

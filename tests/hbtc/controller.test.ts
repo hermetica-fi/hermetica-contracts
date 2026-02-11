@@ -39,9 +39,9 @@ beforeEach(() => {
   initProtocol();
 });
 
-// Helper to advance past update window (~24 hours = ~8640 blocks at 10s/block)
+// Helper to advance past update window (~24 hours, ~523s/block in simnet)
 function advancePastUpdateWindow() {
-  mineBlocks(8700);
+  mineBlocks(170);
 }
 
 describe('Controller Contract', () => {

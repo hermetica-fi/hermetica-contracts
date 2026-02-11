@@ -156,8 +156,8 @@ export const ERR = {
   NOT_ASSET: 102_004n,
 };
 
-// Blocks to mine to pass the 10-second timelock (hardcoded in hq-v1.clar for testing)
-const TIMELOCK_BLOCKS = 2;
+// Blocks to mine to pass the 86400-second timelock (~1 day, ~523s/block in simnet)
+const TIMELOCK_BLOCKS = 170;
 
 /**
  * Mine blocks to advance time
@@ -206,22 +206,38 @@ export function fundTestWalletsWithSBTC() {
   }
 }
 
+// Asset addresses
+const SBTC_TOKEN = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
+const USDH_TOKEN = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1';
+const SUSDH_TOKEN = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1';
+const ZEST_VAULT_SBTC = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc';
+
+// Price feed IDs (Pyth oracle)
+const SBTC_PRICE_FEED = Uint8Array.from(
+  Buffer.from('e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43', 'hex')
+);
+const USDH_PRICE_FEED = Uint8Array.from([0x01]);
+const SUSDH_PRICE_FEED = Uint8Array.from([0x02]);
+
 /**
- * Initialize HQ roles via timelocked request/confirm flow.
- * Requests are batched, time is advanced past the timelock, then all confirms are batched.
+ * Initialize protocol for testing
  *
- * Roles initialized:
- * - Guardian: wallet2
- * - Trader: wallet3, deployer.trading
- * - Rewarder: wallet4, deployer.trading
- * - Manager: wallet5, deployer.trading
- * - Protocol: controller-hbtc, vault, state, reserve, reserve-fund,
- *             fee-collector, zest-interface, hermetica-interface
+ * All timelocked requests (roles + assets + externals) are batched in the same
+ * block, time is advanced once past the 86400-second timelock, then all confirms
+ * are batched together.
+ *
+ * Sets up the complete protocol state:
+ * 1. Initializes HQ roles (guardian, trader, rewarder, manager, protocol)
+ * 2. Registers assets and externals in state contract
+ * 3. Funds test wallets with sBTC
+ * 4. Configures state variables via owner (deployer) calls
  */
-function initRoles() {
+export function initProtocol() {
   const tradingContract = `${deployer}.trading`;
 
-  // Request all role assignments (caller = deployer = owner)
+  // ---- Batch all timelocked requests ----
+
+  // HQ role requests (caller = deployer = owner)
   txOk(hqHbtc.requestGuardianUpdate(guardian, true), deployer);
 
   txOk(hqHbtc.requestTraderUpdate(trader, true), deployer);
@@ -241,10 +257,33 @@ function initRoles() {
     txOk(hqHbtc.requestProtocolUpdate(`${deployer}.${name}`, true), deployer);
   }
 
-  // Advance time past the 86400-second timelock
+  // State asset requests (all 8 decimals, 500 bps max slippage)
+  // Note: v0-vault-sbtc is registered via callPrivateFn below because its contract
+  // is not callable in simnet (remote_data doesn't load it), so requestAssetAdd
+  // (which calls get-decimals) would fail with NoSuchContract.
+  txOk(state.requestAssetAdd(SBTC_TOKEN, SBTC_PRICE_FEED, 8n, 500n, false), deployer);
+  txOk(state.requestAssetAdd(USDH_TOKEN, USDH_PRICE_FEED, 8n, 500n, true), deployer);
+  txOk(state.requestAssetAdd(SUSDH_TOKEN, SUSDH_PRICE_FEED, 8n, 500n, false), deployer);
+
+  // State external requests
+  const externals = [
+    'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-3-market',
+    'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc',
+    'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-usdh',
+    'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0',
+    'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-v1-1',
+    'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-v1-1',
+  ];
+  for (const ext of externals) {
+    txOk(state.requestExternalAdd(ext), deployer);
+  }
+
+  // ---- Advance time past the 86400-second timelock ----
   mineBlocks(TIMELOCK_BLOCKS);
 
-  // Confirm all role assignments
+  // ---- Batch all timelocked confirms ----
+
+  // Confirm HQ role assignments
   txOk(hqHbtc.confirmGuardianRequest(guardian), deployer);
 
   txOk(hqHbtc.confirmTraderRequest(trader), deployer);
@@ -259,59 +298,13 @@ function initRoles() {
   for (const name of protocolContracts) {
     txOk(hqHbtc.confirmProtocolRequest(`${deployer}.${name}`), deployer);
   }
-}
 
-// Asset addresses
-const SBTC_TOKEN = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
-const USDH_TOKEN = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1';
-const SUSDH_TOKEN = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1';
-const ZEST_VAULT_SBTC = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc';
-
-// Price feed IDs (Pyth oracle)
-const SBTC_PRICE_FEED = Uint8Array.from(
-  Buffer.from('e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43', 'hex')
-);
-const USDH_PRICE_FEED = Uint8Array.from([0x01]);
-const SUSDH_PRICE_FEED = Uint8Array.from([0x02]);
-
-/**
- * Initialize state assets and externals via timelocked request/confirm flow.
- * Requests are batched, time is advanced past the timelock, then all confirms are batched.
- *
- * Assets: sBTC, USDh (stablecoin), sUSDh, v0-vault-sbtc
- * Externals: Zest markets/vaults, Zest v2, Hermetica staking contracts
- */
-function initState() {
-  // Request asset additions (all 8 decimals, 500 bps max slippage)
-  // Note: v0-vault-sbtc is registered via callPrivateFn below because its contract
-  // is not callable in simnet (remote_data doesn't load it), so requestAssetAdd
-  // (which calls get-decimals) would fail with NoSuchContract.
-  txOk(state.requestAssetAdd(SBTC_TOKEN, SBTC_PRICE_FEED, 8n, 500n, false), deployer);
-  txOk(state.requestAssetAdd(USDH_TOKEN, USDH_PRICE_FEED, 8n, 500n, true), deployer);
-  txOk(state.requestAssetAdd(SUSDH_TOKEN, SUSDH_PRICE_FEED, 8n, 500n, false), deployer);
-
-  // Request external additions
-  const externals = [
-    'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-3-market',
-    'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc',
-    'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-usdh',
-    'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0',
-    'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-v1-1',
-    'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-v1-1',
-  ];
-  for (const ext of externals) {
-    txOk(state.requestExternalAdd(ext), deployer);
-  }
-
-  // Advance time past the 86400-second timelock
-  mineBlocks(TIMELOCK_BLOCKS);
-
-  // Confirm all asset additions
+  // Confirm state asset additions
   txOk(state.confirmAssetRequest(SBTC_TOKEN), deployer);
   txOk(state.confirmAssetRequest(USDH_TOKEN), deployer);
   txOk(state.confirmAssetRequest(SUSDH_TOKEN), deployer);
 
-  // Confirm all external additions
+  // Confirm state external additions
   for (const ext of externals) {
     txOk(state.confirmExternalRequest(ext), deployer);
   }
@@ -336,23 +329,6 @@ function initState() {
     deployer
   );
   expect(vaultResult.result).toStrictEqual(Cl.bool(true));
-}
-
-/**
- * Initialize protocol for testing
- *
- * Sets up the complete protocol state:
- * 1. Initializes HQ roles (guardian, trader, rewarder, manager, protocol)
- * 2. Registers assets and externals in state contract
- * 3. Funds test wallets with sBTC
- * 4. Configures state variables via owner (deployer) calls
- */
-export function initProtocol() {
-  // Initialize roles via timelocked request/confirm
-  initRoles();
-
-  // Initialize assets and externals via timelocked request/confirm
-  initState();
 
   // Fund test wallets with sBTC
   fundTestWalletsWithSBTC();

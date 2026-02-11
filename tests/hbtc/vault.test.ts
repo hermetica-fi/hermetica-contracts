@@ -40,14 +40,14 @@ beforeEach(() => {
   initProtocol();
 });
 
-// Helper to advance past standard cooldown (3 days = ~25920 blocks at 10s/block)
+// Helper to advance past standard cooldown (3 days = 259200s, ~523s/block in simnet)
 function advancePastCooldown() {
-  mineBlocks(26000);
+  mineBlocks(500);
 }
 
-// Helper to advance past express cooldown (4 hours = ~1440 blocks at 10s/block)
+// Helper to advance past express cooldown (4 hours = 14400s, ~523s/block in simnet)
 function advancePastExpressCooldown() {
-  mineBlocks(1500);
+  mineBlocks(30);
 }
 
 describe('Vault Contract', () => {
