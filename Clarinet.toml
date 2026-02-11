@@ -35,7 +35,25 @@ contract_id = 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2'
 [[project.requirements]]
 contract_id = 'SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS.borrower-v1' # granite borrower (pyth v4)
 
+[[project.requirements]]
+contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-trait-v1'
+
+[[project.requirements]]
+contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-trait-v1'
+
+[[project.requirements]]
+contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.minting-auto-trait-v1'
+
+[[project.requirements]]
+contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1'
+
+[[project.requirements]]
+contract_id = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1'
+
 ##### Zest production mainnet #####
+
+[[project.requirements]]
+contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.ft-trait'
 
 [[project.requirements]]
 contract_id = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.market-trait'
@@ -280,8 +298,8 @@ epoch = 3.3
 
 # hbtc tokens (source: mainnet/contracts/)
 
-[contracts.hbtc-token]
-path = 'mainnet/contracts/hbtc/tokens/hbtc-token.clar'
+[contracts.token-hbtc]
+path = 'mainnet/contracts/hbtc/tokens/token-hbtc.clar'
 clarity_version = 4
 epoch = 3.3
 

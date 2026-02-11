@@ -13,17 +13,17 @@
 ;; Transfer
 ;;-------------------------------------
 
-;; @desc - transfers asset from reserve fund to recipient
-(define-public (transfer (asset <ft>) (amount uint) (recipient principal) (memo (optional (buff 34))))
+(define-public (transfer (asset <ft>) (amount uint) (recipient principal))
   (let (
+    (asset-contract (contract-of asset))
     (balance (try! (contract-call? asset get-balance current-contract)))
   )
     (try! (contract-call? .hq-hbtc check-is-protocol-two contract-caller recipient))
-    (try! (contract-call? .state check-transfer-auth (contract-of asset)))
+    (try! (contract-call? .state check-transfer-auth asset-contract))
     (asserts! (>= balance amount) ERR_INSUFFICIENT_BALANCE)
     (print { action: "transfer", user: contract-caller, data: { asset: asset, amount: amount, recipient: recipient, sender: current-contract, balance: balance }})
-    (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
-      (try! (contract-call? asset transfer amount current-contract recipient memo))
+    (as-contract? ((with-ft asset-contract "*" amount) (with-stx amount))
+      (try! (contract-call? asset transfer amount current-contract recipient none))
     )
   )
 )

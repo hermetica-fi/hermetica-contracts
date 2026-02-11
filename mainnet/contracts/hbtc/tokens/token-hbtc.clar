@@ -17,7 +17,7 @@
 
 (define-data-var token-name (string-ascii 32) "hBTC")
 (define-data-var token-uri (string-utf8 256) u"")
-(define-data-var blacklist-enabled bool false)
+(define-data-var blacklist-enabled bool true)
 
 ;;-------------------------------------
 ;; SIP-010
@@ -97,7 +97,6 @@
 ;; Mint / Burn
 ;;-------------------------------------
 
-;; Mint method
 (define-public (mint-for-protocol (amount uint) (recipient principal))
   (begin
     (try! (contract-call? .hq-hbtc check-is-protocol contract-caller))
@@ -105,7 +104,6 @@
   )
 )
 
-;; Burn method
 (define-public (burn-for-protocol (amount uint) (sender principal))
   (begin
     (try! (contract-call? .hq-hbtc check-is-protocol contract-caller))

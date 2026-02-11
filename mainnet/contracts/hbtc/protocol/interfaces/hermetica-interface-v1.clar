@@ -9,9 +9,9 @@
 (use-trait pyth-storage 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2.storage-trait)
 (use-trait pyth-decoder 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2.decoder-trait)
 (use-trait wormhole-core 'SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.wormhole-traits-v2.core-trait)
-(use-trait staking-trait .staking-trait.staking-trait)
-(use-trait staking-silo-trait .staking-silo-trait.staking-silo-trait)
-(use-trait minting-auto-trait .minting-auto-trait.minting-auto-trait)
+(use-trait staking-trait 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-trait-v1.staking-trait)
+(use-trait staking-silo-trait 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-trait-v1.staking-silo-trait)
+(use-trait minting-auto-trait 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.minting-auto-trait-v1.minting-auto-trait)
 
 ;;-------------------------------------
 ;; Constants
@@ -19,7 +19,7 @@
 
 (define-constant ERR_INVALID_AMOUNT (err u110001))
 
-(define-constant usdh-base u100000000)                          ;; 10^8 = 100000000 (usdh token base)
+(define-constant usdh-base u100000000)
 
 (define-constant reserve .reserve)
 (define-constant usdh-token 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1)
@@ -39,7 +39,7 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of staking) none none none))
     (try! (contract-call? .reserve transfer usdh-token amount current-contract))
-    (try! (as-contract? ((with-ft usdh-token "*" amount)) 
+    (try! (as-contract? ((with-ft usdh-token "*" amount))
       (try! (contract-call? staking stake amount none))
     ))
     (try! (contract-call? 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1 transfer susdh-amount current-contract reserve none))
@@ -96,7 +96,6 @@
   )
 )
 
-;;  hermetica mints convert sBTC, aeUSDC, etc. to USDh
 (define-public (hermetica-mint
   (minting-auto <minting-auto-trait>)
   (minting-asset <ft>)
@@ -122,17 +121,18 @@
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some minting-asset-contract) none))
     (try! (contract-call? .reserve transfer minting-asset amount-asset current-contract))
-    (try! (as-contract? 
+    (try! (as-contract?
       ((with-ft (contract-of minting-asset) "*" amount-asset) (with-stx (+ amount-asset max-pyth-fee)))
       (try! (contract-call? minting-auto mint minting-asset amount-usdh slippage-tolerance memo price-feed execution-plan))
     ))
+
     (let (
       (post-balance (unwrap-panic (contract-call? minting-asset get-balance current-contract)))
       (leftover (if (> post-balance pre-balance) (- post-balance pre-balance) u0))
     )
       (if (> leftover u0)
-        (try! (as-contract? 
-          ((with-ft minting-asset-contract "*" leftover) (with-stx leftover)) 
+        (try! (as-contract?
+          ((with-ft minting-asset-contract "*" leftover) (with-stx leftover))
           (try! (contract-call? minting-asset transfer leftover current-contract reserve none))
         ))
         true
@@ -144,7 +144,6 @@
   )
 )
 
-;;  hermetica redeems can be used to convert USDh to sBTC, aeUSDC, etc.
 (define-public (hermetica-redeem
   (minting-auto <minting-auto-trait>)
   (redeeming-asset <ft>)
@@ -166,17 +165,17 @@
     (initial-asset-balance (unwrap-panic (contract-call? redeeming-asset get-balance current-contract)))
   )
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
-    (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some redeeming-asset-contract) none))    
+    (try! (contract-call? .state check-trading-auth (contract-of minting-auto) none (some redeeming-asset-contract) none))
     (try! (contract-call? .reserve transfer usdh-token amount-usdh current-contract))
-    (try! (as-contract? ((with-ft usdh-token "*" amount-usdh) (with-stx max-pyth-fee)) 
+    (try! (as-contract? ((with-ft usdh-token "*" amount-usdh) (with-stx max-pyth-fee))
       (try! (contract-call? minting-auto redeem redeeming-asset amount-usdh slippage-tolerance memo price-feed execution-plan))
     ))
     (let (
       (new-asset-balance (unwrap-panic (contract-call? redeeming-asset get-balance current-contract)))
       (asset-received (- new-asset-balance initial-asset-balance))
     )
-      (try! (as-contract? 
-        ((with-ft redeeming-asset-contract "*" asset-received) (with-stx asset-received)) 
+      (try! (as-contract?
+        ((with-ft redeeming-asset-contract "*" asset-received) (with-stx asset-received))
         (try! (contract-call? redeeming-asset transfer asset-received current-contract reserve none))
       ))
       (print { action: "hermetica-redeem", user: contract-caller, data: { redeeming-asset: redeeming-asset, amount-usdh: amount-usdh, asset-received: asset-received, minting-contract: minting-auto } })
@@ -186,17 +185,16 @@
 )
 
 ;;-------------------------------------
-;; Admin
+;; Sweep
 ;;-------------------------------------
 
-;; @desc - sweeps any leftover tokens from interface contract to reserve
 (define-public (sweep (asset <ft>) (amount uint))
   (begin
     (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
     (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (try! (as-contract? 
-      ((with-ft (contract-of asset) "*" amount) (with-stx amount)) 
+    (try! (as-contract?
+      ((with-ft (contract-of asset) "*" amount) (with-stx amount))
       (try! (contract-call? asset transfer amount current-contract reserve none))
     ))
     (print { action: "sweep", user: contract-caller, data: { asset: asset, amount: amount, sender: current-contract, recipient: reserve } })

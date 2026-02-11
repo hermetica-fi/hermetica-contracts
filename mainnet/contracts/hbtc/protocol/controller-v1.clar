@@ -13,8 +13,8 @@
 (define-constant ERR_INSUFFICIENT_FUNDS (err u104002))
 (define-constant ERR_NO_PENDING_TRANSFERS (err u104003))
 
-(define-constant bps-base u10000)                               ;; 10^4 = 10000 (basis points base)
-(define-constant pct-base u100)                                 ;; 10^2 = 100 (percentage base)
+(define-constant bps-base u10000)
+(define-constant pct-base u100)
 (define-constant fee-collector .fee-collector)
 (define-constant rf .reserve-fund)
 (define-constant reserve .reserve)
@@ -24,7 +24,6 @@
 ;; Rewarder
 ;;-------------------------------------
 
-;; @desc - log the reward and update the token price
 (define-public (log-reward (reward uint) (is-positive bool))
   (let (
     (state (contract-call? .state get-reward-state))
@@ -38,7 +37,7 @@
     (is-profit (and is-positive (>= reward total-fees)))
     (req-rf (if is-profit
       u0
-      (if is-positive 
+      (if is-positive
         (- mgmt-fee reward)
         (+ mgmt-fee reward))))
     (total-rf (+ (get-sbtc-balance rf) pending-rf))
@@ -50,15 +49,9 @@
     (asserts! (or (> reward u0) is-positive) ERR_ZERO_ONLY_POSITIVE)
 
     (if is-profit
-      ;; Handle profit and zero scenario -> token price increases
       (try! (handle-profit reward total-rf pending-rf perf-fee mgmt-fee reserve-rate))
-      
-      ;; Handle loss scenarios
       (if (<= req-rf total-rf)
-          ;; Reserve-fund can cover the loss -> token price does not change
           (try! (handle-loss-covered reward is-positive total-rf pending-rf mgmt-fee))
-
-          ;; Reserve-fund cannot cover the loss -> token price decreases
           (try! (handle-loss-exceeds reward is-positive total-rf pending-rf req-rf u0 mgmt-fee))
         )
     )
@@ -66,7 +59,6 @@
   )
 )
 
-;; @desc - Process any accumulated unpaid fees and RF when funds are available
 (define-public (settle-pending)
   (let (
     (pending (contract-call? .state get-pending))
@@ -96,10 +88,9 @@
 )
 
 ;;-------------------------------------
-;; Helper Functions
+;; Helpers
 ;;-------------------------------------
 
-;; @desc - Handle profit scenario
 (define-private (handle-profit 
   (reward uint)
   (total-rf uint) (pending-rf uint)
@@ -116,7 +107,7 @@
       user: contract-caller,
       data: { case: (if (is-eq reward-after-fees u0) "zero" "profit"), reward: { gross: reward, net: reward-net, rf: reward-rf, is-positive: true, is-add: true }, fees: { perf: perf-fee, mgmt: mgmt-fee }, rf: { old: total-rf, new: (+ total-rf reward-rf), required: reward-rf } }
     })
-    ;; Single batch call with commit-reward logic
+
     (ok (try! (contract-call? .state update-state 
       (list
         { type: "pending-fees", amount: total-fees, is-add: true }
@@ -126,7 +117,6 @@
   )
 )
 
-;; @desc - Handle loss covered by reserve fund
 (define-private (handle-loss-covered 
   (reward uint) (is-positive bool)
   (total-rf uint) (pending-rf uint)
@@ -144,14 +134,12 @@
       user: contract-caller,
       data: { case: "loss-covered", reward: { gross: reward, net: (get asset-delta delta), rf: transfer-amount, is-positive: is-positive, is-add: (get is-add delta) }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: (- total-rf req-rf), required: req-rf } }
     })
-    
-    ;; Physical transfer if needed
+
     (if (> transfer-amount u0)
-      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve none))
+      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve))
       true
     )
-    
-    ;; Single batch call with commit-reward logic (net reward = 0)
+
     (try! (contract-call? .state update-state 
       (list
         { type: "pending-rf", amount: pending-rf-decrease, is-add: false }
@@ -162,22 +150,16 @@
   )
 )
 
-;; @desc - Handle trading loss scenario where losses exceed reserve fund capacity
 (define-private (handle-loss-exceeds 
   (reward uint) (is-positive bool)
   (total-rf uint) (pending-rf uint) (req-rf uint)
   (perf-fee uint) (mgmt-fee uint))
   (let (
     (transfer-amount (- total-rf pending-rf))
-    ;; mgmt-fee accounted in pending-fees; reward-delta accounts reward vs RF transfer only
     (reward-delta (if is-positive
-      ;; Positive reward < mgmt-fee (req-rf > total-rf): add reward + transfer-amount
       { reward: (+ reward transfer-amount), is-add: true }
-      ;; is-positive = false: reward is absolute loss magnitude
       (if (>= reward transfer-amount)
-        ;; Large loss: remaining loss = reward - transfer-amount (net decrease)
         { reward: (- reward transfer-amount), is-add: false }
-        ;; Small loss: RF covers it, net positive = transfer-amount - reward (mgmt-fee pushes req-rf > total-rf)
         { reward: (- transfer-amount reward), is-add: true })))
   )
     (print {
@@ -185,13 +167,11 @@
       user: contract-caller,
       data: { case: "loss-exceeds", reward: { gross: reward, net: (get reward reward-delta), rf: transfer-amount, is-positive: is-positive, is-add: (get is-add reward-delta) }, fees: { perf: u0, mgmt: mgmt-fee }, rf: { old: total-rf, new: u0, required: req-rf } }
     })
-
     (if (> transfer-amount u0)
-      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve none))
+      (try! (contract-call? .reserve-fund transfer sbtc-token transfer-amount reserve))
       true
     )
 
-    ;; Single batch call with commit-reward logic using adjusted loss accounting
     (ok (try! (contract-call? .state update-state 
       (list
         { type: "pending-fees", amount: mgmt-fee, is-add: true }
