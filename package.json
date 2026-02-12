@@ -1,0 +1,28 @@
+{
+  "name": "hermetica-contracts",
+  "version": "1.0.0",
+  "description": "Hermetica Contracts local testing",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "clarigen": "clarigen",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "bash coverage.sh"
+  },
+  "dependencies": {
+    "@clarigen/cli": "4.0.0",
+    "@clarigen/core": "4.0.0",
+    "@clarigen/test": "4.0.0",
+    "@stacks/clarinet-sdk": "3.13.1",
+    "@stacks/clarinet-sdk-wasm": "3.13.1",
+    "@stacks/transactions": "7.2.0",
+    "typescript": "5.9.2",
+    "vite": "7.3.1",
+    "vitest": "^4.0.18",
+    "vitest-environment-clarinet": "3.0.2"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18"
+  }
+}

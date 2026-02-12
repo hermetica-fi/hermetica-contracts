@@ -5,3 +5,8 @@ history.txt
 .cache
 .DS_Store
 .DStore
+node_modules/
+**/clarigen-types.ts
+coverage/
+coverage-temp/
+lcov.info

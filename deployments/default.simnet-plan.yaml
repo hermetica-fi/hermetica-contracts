@@ -1,0 +1,257 @@
+---
+id: 0
+name: "Simulated deployment, used as a default for `clarinet console`, `clarinet test` and `clarinet check`"
+network: simnet
+genesis:
+  wallets:
+    - name: deployer
+      address: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_1
+      address: SP1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2XG1V316
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_2
+      address: SP2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CH94GRJ
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_3
+      address: SP2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1J5QKA2F
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_4
+      address: SP2NEB84ASENDXKYGJPQW86YXQCEFEX2ZPB1S2EP
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_5
+      address: SP2REHHS5J3CERCRBEPMGH7921Q6PYKAADR2V8W5C
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_6
+      address: SP3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ3JJEPMJ
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_7
+      address: SP3PF13W7Z0RRM42A8VZRVFQ75SV1K26RXFA1W3C2
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wallet_8
+      address: SP3NBRSFKX28FQ2ZJ1MAKX58HKHSDGNV5N6R5192Q
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+    - name: wbtc_deployer
+      address: SPNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2C69MJD9
+      balance: "100000000000000"
+      sbtc-balance: "1000000000"
+  contracts:
+    - genesis
+    - lockup
+    - bns
+    - cost-voting
+    - costs
+    - pox
+    - costs-2
+    - pox-2
+    - costs-3
+    - pox-3
+    - pox-4
+    - signers
+    - signers-voting
+    - costs-4
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - emulated-contract-publish:
+            contract-name: hq
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/hq-v1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: blacklist-susdh
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/blacklist-susdh-v1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: token-migration-trait
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/traits/token-migration-trait-v1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: interim-token-trait
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/traits/interim-token-trait-v1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: sip-010-trait
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/traits/sip-010-trait.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: usdh-token
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/tokens/usdh-token-v1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: controller
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/controller-v1-1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: susdh-token
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/tokens/susdh-token-v1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: emergency-recover
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/emergency-recover-v1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: minting-state
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/minting-state-v1.clar
+            clarity-version: 2
+      epoch: "2.5"
+    - id: 1
+      transactions:
+        - emulated-contract-publish:
+            contract-name: redeeming-reserve
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: minting
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/minting-v1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: minting-auto-state
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/minting-auto-state-v1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: minting-auto-trait
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/traits/minting-auto-trait-v1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: minting-auto
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/minting-auto-v1-2.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: staking-reserve
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/staking-reserve-v1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: staking-state
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/staking-state-v1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: staking-silo
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/staking-silo-v1-1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: staking-trait
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/traits/staking-trait-v1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: staking
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/staking-v1-1.clar
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: staking-silo-trait
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/traits/staking-silo-trait-v1.clar
+            clarity-version: 3
+      epoch: "3.2"
+    - id: 2
+      transactions:
+        - emulated-contract-publish:
+            contract-name: hq-hbtc
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/hq-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: blacklist
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/blacklist-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: token-hbtc
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/tokens/token-hbtc.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: state
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/state-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: reserve
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/reserve-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: reserve-fund
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/reserve-fund-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: controller-hbtc
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/controller-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: fee-collector
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/fee-collector-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: granite-borrower-trait-v1
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/traits/granite-borrower-trait-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: granite-interface
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/interfaces/granite-interface-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: hermetica-interface
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/interfaces/hermetica-interface-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: minting-otc
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/usdh/protocol/minting-otc-v1-1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: vault-trait-v1
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/traits/vault-trait-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: zest-interface
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/interfaces/zest-interface-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: trading
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/trading-v1.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: vault
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/vault-v1.clar
+            clarity-version: 4
+      epoch: "3.3"

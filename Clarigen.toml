@@ -1,0 +1,4 @@
+clarinet = "./Clarinet.toml"
+
+[types]
+output = "tests/clarigen-types.ts"

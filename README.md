@@ -1,118 +1,225 @@
-# Audit reports
+# Hermetica hBTC Protocol
 
-| Date | Auditor | Report PDF | Init commit hash |
-| ----------- | ------ | --------- | -------- |
-| 09/2025 | [Clarity Alliance](https://www.clarityalliance.org/hermetica-usdh-upgrade) | [Staking-v1-1](https://clarity-alliance.github.io/audits/Clarity%20Alliance%20-%20Hermetica%20USDh%20(Upgrade).pdf)| [Link](https://github.com/hermetica-fi/hermetica-contracts/commit/1b9a84f91204ed326952d0d1e0adc464df5c7a52) |
-| 03/2025 | [Clarity Alliance](https://www.clarityalliance.org/hermeticaminting) | [Minting-auto](https://github.com/Clarity-Alliance/audits/blob/main/Clarity%20Alliance%20-%20Hermetica%20USDh%20Minting%20Contract.pdf)| [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/2d51015b223b844f9c3ed026669a97b1b594d41b) |
-| 06/2024 | [StrataLabs](https://www.stratalabs.org/) | [USDh protocol](https://2201013687-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2Fxp26OjT5H1o55M1QMDI4%2Fuploads%2FsxllbdrJOMTz2f6U8MRR%2FHermetica%20x%20StrataLabs%20-%20Audit%20Report.pdf?alt=media&token=b906f43e-aebc-4d96-a050-223689442378) | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/83c3cad999b6797e68527ecbccbba34b2bdd2611) |
-| 06/2024 | [Clarity Alliance](https://www.clarityalliance.org/hermetica) | [USDh protocol](https://github.com/Clarity-Alliance/audits/blob/main/Clarity%20Alliance%20-%20Hermetica.pdf) | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/83c3cad999b6797e68527ecbccbba34b2bdd2611) |
+Hermetica hBTC is a Bitcoin yield vault written in Clarity with ERC-4626-style share mint/redeem, daily NAV updates, and strategy execution via external protocol integrations.
 
-## Staking-v1-1 Upgrade Remediations (Clarity Alliance - 09/2025)
+### mainnet/
+Production Clarity contracts and audit reports:
+- All hBTC and USDh protocol contracts (source of truth)
+- Audit reports with remediation details
 
-| ID     | Title                                         | Severity | Status      | Github PR |
-| ------ | --------------------------------------------- | -------- | ----------- | ----------- |
-| H-01   | Different Staking Contract Versions Design Flaw Skews USDh/sUSDh Conversion Ratio | High     | Resolved    |             |
-| L-01   | Staking State Contract Authorization Ambiguities | Low      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-contracts/pull/40) |
-| QA-01  | Claim With Zero Tokens Should Not Be Valid   | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-contracts/pull/39) |
-| QA-02  | Redundant Tuples With Single Element as Map Key Or Value | QA       | Acknowledged |             |
-| QA-03  | No Affiliate Validation                      | QA       | Acknowledged |             |
-| QA-04  | Staking Cannot Be Paused Separately From Unstaking | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-contracts/pull/37) |
-| QA-05  | Unstaking Can Be Simplified                  | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-contracts/pull/38) |
+**[View Audit Reports →](mainnet/README.md)**
 
+### tests/
+**For Security Researchers:**
+- Complete test suite with 115 tests across vault, controller, trading, and interface contracts
+- Mainnet fork testing with real Zest and Hermetica integrations
+- Protocol initialization via timelocked governance flows (matching the on-chain process)
+- TypeScript types via Clarigen
 
-### Additional PRs part of the audit
+**[Security Researchers: Get Started →](#quick-start)**
 
-| Title                                         | Github PR |
-| --------------------------------------------- | --------- |
-| fix: restrict staking-reserve transfers to minting contracts only    | [Link](https://github.com/hermetica-fi/hermetica-contracts/pull/36) |
-| fix: deprecated next-claim-id in staking-silo         | [Link](https://github.com/hermetica-fi/hermetica-contracts/pull/41) |
+## Bug Bounty
 
-## Minting-auto Remediations (Clarity Alliance - 03/2025)
+**Active bug bounty program on Immunefi:** https://immunefi.com/bug-bounty/hermetica/
 
-| ID     | Title                                         | Severity | Status      | Commit Hash |
-| ------ | --------------------------------------------- | -------- | ----------- | ----------- |
-| H-01   | Deprecated Pyth Oracle Version Is Used        | High     | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/f260f0d7cfec580f81c20e71064d42aea03fca69) |
-| H-02   | Hardcoded Pyth Price Exponent                 | High     | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/c610ecb87cd1f24a8d7aa4c28f68c2f6967cc7af) |
-| M-01   | Pyth Price Confidence Is Not Validated        | Medium   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/2f9dc50d04815c1bdfc33fbe62d213167ca0b967) |
-| M-02   | Redeeming Incorrectly Consumes Minting Allowance | Medium   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/29629413a5c355d904ac53812fd9bfc8aac6f431) |
-| L-01   | Avoid Using tx-sender for Caller Identification | Low      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/cd140d080b19277ed3a0754cc8e88aaac9a1ac9f) |
-| QA-01  | Absence of Events for Critical Actions        | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/091e1a5aaecf20a69ee56b893eab29c8d8c131c8) |
-| QA-02  | Typographical Error                           | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/43dd97c8f312947895bc81d158934e75ff60ed38) |
-| QA-03  | Redundant Tuple with a Single Element as Map Key | QA       | Acknowledged |             |
-| QA-04  | Simplification of set-supported-asset         | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/1515a2b24cd4f000466350710346c0895ac14a07) |
-| QA-05  | Implement Standard Checks for All Saved Principals | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/1aca5e7410ed90403850b0f2196ef33fac1ff4f8) |
-| QA-06  | Unused Redeem Memo Argument                   | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/85b0a159438880e5887d5bd16cbc9a1c21a9ac26) |
-| QA-07  | Missing Required USDh Amount Validation       | QA       | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/3941efa6daa0a1aba50f40066c6d2014cf5ff587) |
-| QA-08  | Slippage Mechanism Is Ineffective Against Price Fluctuations | QA       | Acknowledged | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/a013a6c15cb7a1c91b19da73e809bcc4caf92dc8) |
+For security research, focus on:
+- Authorization bypasses
+- Share price manipulation
+- Cooldown circumvention
+- Asset theft vectors
+- Blacklist evasion
+- Cross-protocol integration vulnerabilities
 
-## USDh Protocol Remediations (StrataLabs - 06/2024)
+## Key Features
 
-Below is a summary & list of all priority (0 - 3) issues found throughout an independent or
-paired review session. 
+- **Yield-Bearing Bitcoin**: Deposit sBTC, receive hBTC shares that appreciate as protocol earns yield
+- **DeFi Integrations**: Atomic position management across Zest (borrow/lend) and Hermetica USDh (stake)
+- **Flexible Redemptions**: Standard (3-day) or Express (4-hour) cooldown periods
+- **Loss Protection**: Reserve fund absorbs losses before affecting share price
+- **Role-Based Access**: Timelocked governance with guardian emergency controls
 
-- **P0:** has a high certainty in loss of protocol | user funds
-- **P1:** has a low probability through events such as admin accidents | governance exploits
-- **P2:** is highly recommend
-- **P3:** optional (usually syntax/optimization based)
+## Core Components
 
-| Title                                         | Severity | Location                              | Category           | Status      | Remediation Link                                                                    |
-| --------------------------------------------- | -------- | ------------------------------------- | ------------------ | ----------- | ----------------------------------------------------------------------------------- |
-| Possible custodial mint replay (Use map-insert for mint/redeem-request)  | P1       | minting-otc-v1          | Input Validation   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/981a94edb25b433c183641a9e1ea0b92402836f3)  |
-| No Receiver Check Withdrawing From insurance-fund | P1       | insurance-fund-v1   | Access Control     | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/774219ba828dfb3e14d1f2c7e5a60fed34016a6c) |
-| No Receiver Check Withdrawing From reserve-v1   | P1       | reserve-v1      | Access Control     | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/4747010122da6580e5bbff1fb7fd779d8b8d82b6) |
-| No Receiver Check Withdrawing From staking-reserve-v1 | P1       | staking-reserve-v1       | Access Control     | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/45858e71022b038320d87316afc7521b0ddfd0bb) |
-| Off-chain To On-Chain Data Verification       | P1       | minting-otc-v1       | Input Validation   | Acknowledged |                                                                                     |
-| Possible (log-pnl …) Breakage                | P2       | controller-v1   | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/774219ba828dfb3e14d1f2c7e5a60fed34016a6c) |
-| Lack of Centralized State / Storage           | P2       | protocol architecture       | Arquitecture      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/4747010122da6580e5bbff1fb7fd779d8b8d82b6) |
-| Unnecessarily Holding Onto Staked Liquidity   | P2       | staking-v1; staking-reserve-v1       | Arquitecture      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/45858e71022b038320d87316afc7521b0ddfd0bb) |
-| Let instead of (begin …)                      | P3       | controller-v1     | Gas Optimization   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/774219ba828dfb3e14d1f2c7e5a60fed34016a6c) |
-| Unnecessary (begin …)                         | P3       | usdh-token-v1      | Gas Optimization   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/commit/5caee930705c7f5eacbb03a7d6c731f986f03026) |
+| Contract | Purpose |
+|----------|---------|
+| `vault-v1.clar` | Core deposit/redeem logic, claim management |
+| `controller-v1.clar` | Reward distribution, fee accounting, reserve fund loss handling |
+| `state-v1.clar` | Central configuration, timelocked parameter updates, feature flags, asset/external registries, share accounting |
+| `hq-v1.clar` | Role-based access control with timelock |
+| `reserve-v1.clar` | Holds protocol assets (sBTC) |
+| `reserve-fund-v1.clar` | Loss absorption buffer |
+| `fee-collector-v1.clar` | Collects and distributes fees |
+| `blacklist-v1.clar` | Dual-level (soft/full) address restriction management |
+| `trading-v1.clar` | Atomic DeFi position management |
+| `token-hbtc.clar` | SIP-010 hBTC token (shares) |
 
+## External Interfaces
 
-## USDh Protocol Remediations (Clarity Alliance - 06-2024)
+| Contract | Integration | Purpose |
+|----------|-------------|---------|
+| `zest-interface-v1.clar` | Zest Protocol v2 | Collateral management, borrowing stablecoins |
+| `hermetica-interface-v1.clar` | Hermetica USDh | Stake/unstake sUSDh for yield, mint/redeem USDh |
+| `granite-interface-v1.clar` | Granite Protocol | Collateral management, borrowing stablecoins |
 
-| Title                                                               | Severity | Location                                                                     | Category           | Status      | Remediation Link                                                                  |
-| ------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------- | ------------------ | ----------- | --------------------------------------------------------------------------------- |
-| Reversed slippage check renders `confirm-redeem` useless             | Critical | minting-v1                                                      | Input Validation   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/1)                   |
-| First depositor attack                                              | High     | staking-v1                                                     | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/17)                  |
-| Can create mint requests guaranteed to fail                         | Medium   | minting-v1                                                    | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/4)                   |
-| Fractional fee structure is not practical                          | Medium   | minting-v1                              | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/5)                   |
-| Mint limit DoS                                                      | Medium   | minting-v1                      | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/19)                  |
-| Not updating `last-oracle-timestamp` in `reset-mint-window`          | Medium   | minting-v1                     | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/3)                   |
-| reset-mint-window doesn't perform staleness checks                   | Medium   | minting-v1                       | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/6)                   |
-| `mint-limit-reset-window` is 1 block bigger, lowering OTC minting rates | Low      | minting-otc-v1                     | Math               | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/7)                   |
-| Missing functionality to set soft-blacklist-enabled                 | Low      | blacklist-susdh-v1    | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/10)                  |
-| The soft blacklist check which prevents staking and unstaking can be escaped | Low      | staking-v1                     | Input Validation   | Acknowledged |                                                                                 |
-| recover-susdh always checks for full blacklist even when blacklist-enabled is set as false | Low      | recover-v1                | Input Validation   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/11)                  |
-| Ownership of hq can be forever lost due to missing safe guard        | Low      | hq-v1             | Access Control     | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/18)                  |
-| Unused functionality in minting-otc as the system doesn't do asset commission when confirming a mint. | QA       | minting-otc-v1 | Logical Error      | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/8)                   |
-| The functions confirm-mint, confirm-redeem don't check if the asset is still active | QA       | minting-v1                | Input Validation   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/9)                   |
-| Remove unnecessary variables                                        | QA       | minting-v1                                     | Gas Optimization   | Resolved    | [Link](https://github.com/hermetica-fi/hermetica-usdh-contracts/pull/13)                  |
+## Protocol Flows
 
+### Deposit Flow
+```
+User deposits sBTC → vault.deposit() → blacklist + state validate (enabled, cap, minimum)
+                                     → sBTC transferred to reserve
+                                     → state updates total-assets, mints hBTC shares to user
+```
 
-## Deployment and Security Considerations
+### Redeem Flow (3-step process)
+```
+1. request-redeem(shares, is-express) → Escrows hBTC in vault, creates claim with cooldown
+2. fund-claim(claim-id)               → Manager (anytime) or caller (after cooldown)
+                                        Locks share price, burns shares, moves sBTC to vault
+3. redeem(claim-id)                   → After cooldown, transfers sBTC (minus exit fee) to user
+```
 
-### hBTC Vault First Depositor Attack Mitigation
+### Reward Flow (Yield Distribution)
+```
+Rewarder calls controller.log-reward(amount, is-positive)
+  → Positive: Management + performance fees deducted, net reward increases total-assets, share price rises
+  → Negative: Reserve fund covers loss first, share price drops only if reserve insufficient
+```
 
-Smart contract vaults are subject to a known class of attacks where the first depositor can manipulate the share price through inflation. This enables attackers to extract value from subsequent depositors via a [known variation of the first depositor attack](https://x.com/kankodu/status/1771229163942474096) that applies even when the vault accounts for direct deposits.
+### Trading Flow (DeFi Integration)
+```
+Open Position:  zest-add-open() → Add sBTC collateral → Borrow USDh → Stake in Hermetica
+Close Position: zest-close-remove() → Unstake sUSDh → Repay loan → Remove collateral
+```
 
-**Attack Mechanism**: Through repetitive, cleverly chosen dust deposits and withdrawals, an attacker can exponentially inflate the shares-to-asset ratio such that 1 unit of shares becomes vastly more valuable. This allows future deposits to round down significantly, with the attacker collecting the rounded-down amounts.
+## Quick Start
 
-**Mitigation**: The hBTC vault design includes a maximum price divergence mechanism that makes this attack economically unfeasible. However, to completely eliminate any potential rounding edge cases, the following deployment procedure must be executed.
+### Prerequisites
+- [Clarinet](https://github.com/stx-labs/clarinet) - Clarity development environment
+- [Clarigen](https://github.com/mechanismHQ/clarigen) - TypeScript type generator
+- Node.js v18+
+- [Hiro API Key](https://platform.hiro.so/) - Required for mainnet fork testing
 
-#### Required Deployment Procedure
+### Setup
+```bash
+npm install
+npm run clarigen  # Generate TypeScript types
+```
 
-**After vault contract deployment, execute the following steps:**
+### Environment Variables
+The tests require a Hiro API key to access mainnet fork data:
 
-1. Have the deployment team deposit an initial amount of assets into the vault
-2. Transfer dust shares (e.g., 1000 LP nano units) to an inaccessible burn address: `SP000000000000000000002Q6VF78`
-3. These shares will never be burned or redeemed, ensuring the vault is never completely empty
+```bash
+export HIRO_API_KEY=your_api_key_here
+```
 
-This procedure ensures that the vault always maintains a minimum share balance, preventing any first depositor from becoming the sole liquidity provider and eliminating rounding vulnerabilities.
+Get your free API key at https://platform.hiro.so/
 
-**Note**: This is a one-time operation that must be performed immediately after deployment and before the vault is opened to public deposits.
+### Run Tests
+```bash
+npm test                                    # Run all tests
+npm test -- tests/hbtc/                     # Run hBTC tests only
+npm test -- tests/hbtc/vault.test.ts        # Run specific test file
+npm test -- -t "should successfully"        # Run tests matching pattern
+```
 
-## Documentation
+## Test Coverage
 
-- https://hermetica.gitbook.io/hermetica-tech-docs
-- https://docs.hermetica.fi/
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `vault.test.ts` | 45 | Deposit, request-redeem, fund-claim, redeem, cancel, express |
+| `controller.test.ts` | 20 | Log-reward (positive/negative), rate limiting, edge cases |
+| `trading.test.ts` | 16 | Open/close positions, Zest+Hermetica integration |
+| `zest-interface.test.ts` | 24 | Collateral add/remove, borrow/repay, vault operations |
+| `hermetica-interface.test.ts` | 10 | Stake/unstake/withdraw, sweep, authorization |
+
+### Happy Path Tests
+
+**Vault Flow (Deposit → Fund-claim → Redeem):**
+- Full standard redemption flow (3-day cooldown)
+- Full express redemption flow (4-hour cooldown)
+- Multiple deposits and partial redemptions
+
+**Controller Log-Rewards:**
+- Positive reward increases total-assets
+- Loss covered by reserve fund
+- Loss causes price drop when reserve insufficient
+
+**Trading (Open → Close Position):**
+- Add collateral, borrow USDh, stake in Hermetica
+- Unstake sUSDh, repay loan, remove collateral
+
+## Test Helpers
+
+The test setup (`tests/helpers/setup.ts`) provides:
+
+### Pre-configured Roles
+
+| Role | Wallet | Purpose |
+|------|--------|---------|
+| Owner | deployer | Contract owner, timelocked role changes |
+| Guardian | wallet_2 | Emergency pause |
+| Trader | wallet_3 | Trading operations |
+| Rewarder | wallet_4 | Log rewards |
+| Manager | wallet_5 | Fund claims early |
+| User 1-3 | wallet_6-8 | Test users for deposits/redemptions |
+
+### Utilities
+- `txOk(call, sender)` - Execute transaction expecting success
+- `txErr(call, sender)` - Execute transaction expecting error
+- `rov(call)` - Read-only function call
+- `rovOk(call)` - Read-only function call expecting ok
+- `filterEvents(events)` - Filter transaction events
+- `mineBlocks(n)` - Advance blockchain by n blocks
+
+### Constants
+- `ONE_BTC = 100_000_000n` (8 decimals)
+- `ONE_USDH = 100_000_000n` (8 decimals)
+- `SHARE_BASE = 100_000_000n`
+- Standard cooldown: 259,200 seconds (3 days)
+- Express cooldown: 14,400 seconds (4 hours)
+
+## Error Codes
+
+| Code | Name | Description |
+|------|------|-------------|
+| 101001 | NOT_OWNER | Caller is not contract owner |
+| 101003 | NOT_GUARDIAN | Caller lacks guardian role |
+| 101004 | NOT_TRADER | Caller lacks trader role |
+| 101005 | NOT_REWARDER | Caller lacks rewarder role |
+| 101006 | NOT_MANAGER | Caller lacks manager role |
+| 101007 | NOT_FEE_SETTER | Caller lacks fee-setter role |
+| 101008 | NOT_PROTOCOL | Caller lacks protocol role |
+| 101013 | TIMELOCK | Timelock period not elapsed |
+| 102005 | DEPOSIT_DISABLED | Deposits are paused |
+| 102006 | REDEEM_DISABLED | Redemptions are paused |
+| 102022 | REWARD_DISABLED | Reward logging is disabled |
+| 103001 | DEPOSIT_CAP_EXCEEDED | Would exceed deposit cap |
+| 103002 | BELOW_MIN | Amount below minimum |
+| 103004 | NOT_COOLED_DOWN | Cooldown period not elapsed |
+| 103005 | ALREADY_FUNDED | Claim already funded |
+| 103006 | NOT_FUNDED | Claim not yet funded |
+| 103008 | NOT_AUTHORIZED | Not claim owner |
+| 104001 | ZERO_ONLY_POSITIVE | Zero amount only valid for positive rewards |
+| 104002 | INSUFFICIENT_FUNDS | Insufficient funds for operation |
+| 108002 | SOFT_BLACKLISTED | Address is soft-blacklisted |
+| 108003 | FULLY_BLACKLISTED | Address is fully-blacklisted |
+| 120001 | TRADING_INVALID_AMOUNT | Trading amount is zero or invalid |
+
+See `tests/helpers/setup.ts` for the complete error code mapping.
+
+## Testing Architecture
+
+Tests run directly against the **production contracts** in `mainnet/contracts/` — Protocol initialization is performed in `tests/helpers/setup.ts` using the same timelocked request/confirm governance flows used on-chain:
+- Roles are assigned via `requestXxxUpdate` → mine past timelock → `confirmXxxRequest`
+- Assets and externals are registered via `requestAssetAdd`/`requestExternalAdd` → confirm
+- State variables (deposit cap, express settings) are configured via owner calls
+
+## Mainnet Fork Testing
+
+Tests run against a **mainnet fork** at block height 6316137, enabling:
+- Real Zest Protocol v2 market integration
+- Real Hermetica USDh staking contracts
+- Pyth oracle price feeds
+- DIA oracle for USDh pricing
+
+This allows testing actual cross-protocol interactions without mocking.
