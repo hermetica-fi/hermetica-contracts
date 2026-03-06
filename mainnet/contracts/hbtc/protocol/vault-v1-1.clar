@@ -2,7 +2,7 @@
 ;; Copyright (c) 2026 Hermetica Labs, Inc.
 
 ;; @contract Vault
-;; @version 1
+;; @version 1.1
 ;; @description User interaction logic
 
 (impl-trait .vault-trait-v1.vault-trait)
