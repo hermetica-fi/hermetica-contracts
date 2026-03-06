@@ -21,6 +21,7 @@
 (define-constant ERR_NOT_AUTHORIZED (err u103008))
 (define-constant ERR_NOT_ALLOWED (err u103009))
 (define-constant ERR_SENDER_NOT_CALLER (err u103010))
+(define-constant ERR_MAX_FEE (err u103011))
 
 (define-constant share-base u100000000)
 (define-constant bps-base u10000)
@@ -174,9 +175,10 @@
   )
     (asserts! (is-eq tx-sender contract-caller) ERR_SENDER_NOT_CALLER)
     (asserts! (is-eq tx-sender (get user claim)) ERR_NOT_AUTHORIZED)
+    (asserts! (>= assets max-fee) ERR_MAX_FEE)
 
     (print { action: "redeem-peg-out", user: contract-caller, data: { claim-id: claim-id, assets: assets, btc-recipient: btc-recipient, max-fee: max-fee } })
-    (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-withdrawal initiate-withdrawal-request assets btc-recipient max-fee)
+    (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-withdrawal initiate-withdrawal-request (- assets max-fee) btc-recipient max-fee)
   )
 )
 
