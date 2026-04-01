@@ -275,7 +275,7 @@ clarity_version = 4
 epoch = 3.3
 
 [contracts.vault]
-path = 'mainnet/contracts/hbtc/protocol/vault-v1-1.clar'
+path = 'mainnet/contracts/hbtc/protocol/vault-v1-2.clar'
 clarity_version = 4
 epoch = 3.3
 

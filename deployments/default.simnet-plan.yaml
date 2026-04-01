@@ -5,43 +5,43 @@ network: simnet
 genesis:
   wallets:
     - name: deployer
-      address: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      address: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_1
-      address: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5
+      address: SP1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2XG1V316
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_2
-      address: ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG
+      address: SP2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CH94GRJ
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_3
-      address: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC
+      address: SP2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1J5QKA2F
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_4
-      address: ST2NEB84ASENDXKYGJPQW86YXQCEFEX2ZQPG87ND
+      address: SP2NEB84ASENDXKYGJPQW86YXQCEFEX2ZPB1S2EP
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_5
-      address: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB
+      address: SP2REHHS5J3CERCRBEPMGH7921Q6PYKAADR2V8W5C
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_6
-      address: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0
+      address: SP3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ3JJEPMJ
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_7
-      address: ST3PF13W7Z0RRM42A8VZRVFQ75SV1K26RXEP8YGKJ
+      address: SP3PF13W7Z0RRM42A8VZRVFQ75SV1K26RXFA1W3C2
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wallet_8
-      address: ST3NBRSFKX28FQ2ZJ1MAKX58HKHSDGNV5N7R21XCP
+      address: SP3NBRSFKX28FQ2ZJ1MAKX58HKHSDGNV5N6R5192Q
       balance: "100000000000000"
       sbtc-balance: "1000000000"
     - name: wbtc_deployer
-      address: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6
+      address: SPNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2C69MJD9
       balance: "100000000000000"
       sbtc-balance: "1000000000"
   contracts:
@@ -64,592 +64,194 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: sip-010-trait-ft-standard
-            emulated-sender: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE
-            path: ".cache/requirements/SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.clar"
-            clarity-version: 1
-      epoch: "2.0"
-    - id: 1
-      transactions:
-        - emulated-contract-publish:
-            contract-name: ft-trait
-            emulated-sender: SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N
-            path: ".cache/requirements/SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.ft-trait.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: dao
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.dao.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: reserve-trait-v1
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.reserve-trait-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: reserve-v1
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.reserve-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: sip-010-trait-ft-standard
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.sip-010-trait-ft-standard.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: ststx-token
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: ownable-trait
-            emulated-sender: SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K
-            path: ".cache/requirements/SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.ownable-trait.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: bridge-token-trait
-            emulated-sender: SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K
-            path: ".cache/requirements/SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.bridge-token-trait.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: token-aeusdc
-            emulated-sender: SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K
-            path: ".cache/requirements/SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: hk-cursor-v2
-            emulated-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
-            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2.clar"
-            clarity-version: 2
-      epoch: "2.4"
-    - id: 2
-      transactions:
-        - emulated-contract-publish:
-            contract-name: hq-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: blacklist-susdh-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.blacklist-susdh-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: token-migration-trait-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.token-migration-trait-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: interim-token-trait-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.interim-token-trait-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: sip-010-trait
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.sip-010-trait.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: usdh-token-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: susdh-token-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
             contract-name: hq
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/hq-v1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: blacklist-susdh
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/blacklist-susdh-v1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: token-migration-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/traits/token-migration-trait-v1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: interim-token-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/traits/interim-token-trait-v1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: sip-010-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/traits/sip-010-trait.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: usdh-token
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/tokens/usdh-token-v1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: controller
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/controller-v1-1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: susdh-token
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/tokens/susdh-token-v1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: emergency-recover
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/emergency-recover-v1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: minting-state
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/minting-state-v1.clar
             clarity-version: 2
       epoch: "2.5"
-    - id: 3
+    - id: 1
       transactions:
-        - emulated-contract-publish:
-            contract-name: sbtc-registry
-            emulated-sender: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4
-            path: ".cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-registry.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: sbtc-token
-            emulated-sender: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4
-            path: ".cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: sbtc-deposit
-            emulated-sender: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4
-            path: ".cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-deposit.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: sbtc-withdrawal
-            emulated-sender: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4
-            path: ".cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-withdrawal.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: trait-dia-oracle
-            emulated-sender: SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0
-            path: ".cache/requirements/SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.trait-dia-oracle.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: dia-oracle
-            emulated-sender: SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0
-            path: ".cache/requirements/SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle.clar"
-            clarity-version: 3
-      epoch: "3.0"
-    - id: 4
-      transactions:
-        - emulated-contract-publish:
-            contract-name: position-trait-v1
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.position-trait-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: ststxbtc-tracking-data
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-tracking-data.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: ststxbtc-tracking
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-tracking.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: ststxbtc-token
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-token.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: ststxbtc-tracking-data-v2
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-tracking-data-v2.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: ststxbtc-tracking-v2
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-tracking-v2.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: ststxbtc-token-v2
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-token-v2.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: block-info-nakamoto-ststx-ratio-v2
-            emulated-sender: SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG
-            path: ".cache/requirements/SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.block-info-nakamoto-ststx-ratio-v2.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: constants-v1
-            emulated-sender: SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA
-            path: ".cache/requirements/SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA.constants-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: math-v1
-            emulated-sender: SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA
-            path: ".cache/requirements/SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA.math-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: state-v1
-            emulated-sender: SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA
-            path: ".cache/requirements/SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA.state-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: constants-v2
-            emulated-sender: SP3BJR4P3W2Y9G22HA595Z59VHBC9EQYRFWSKG743
-            path: ".cache/requirements/SP3BJR4P3W2Y9G22HA595Z59VHBC9EQYRFWSKG743.constants-v2.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: linear-kinked-ir-v1
-            emulated-sender: SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA
-            path: ".cache/requirements/SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA.linear-kinked-ir-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-reward-v1
-            emulated-sender: SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA
-            path: ".cache/requirements/SP35E2BBMDT2Y1HB0NTK139YBGYV3PAPK3WA8BRNA.staking-reward-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-v1
-            emulated-sender: SP3BJR4P3W2Y9G22HA595Z59VHBC9EQYRFWSKG743
-            path: ".cache/requirements/SP3BJR4P3W2Y9G22HA595Z59VHBC9EQYRFWSKG743.staking-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: wormhole-traits-v1
-            emulated-sender: SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY
-            path: ".cache/requirements/SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.wormhole-traits-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-traits-v1
-            emulated-sender: SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY
-            path: ".cache/requirements/SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-traits-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-governance-v2
-            emulated-sender: SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY
-            path: ".cache/requirements/SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-governance-v2.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-oracle-v3
-            emulated-sender: SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY
-            path: ".cache/requirements/SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-oracle-v3.clar"
-            clarity-version: 3
-      epoch: "3.1"
-    - id: 5
-      transactions:
-        - emulated-contract-publish:
-            contract-name: wormhole-traits-v2
-            emulated-sender: SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y
-            path: ".cache/requirements/SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.wormhole-traits-v2.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-traits-v2
-            emulated-sender: SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y
-            path: ".cache/requirements/SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-traits-v2.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: minting-auto-trait-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.minting-auto-trait-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-reserve-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-reserve-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-silo-trait-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-trait-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-state-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-state-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-silo-v1-1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-v1-1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-trait-v1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-trait-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: staking-v1-1
-            emulated-sender: SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG
-            path: ".cache/requirements/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-v1-1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-governance-v3
-            emulated-sender: SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y
-            path: ".cache/requirements/SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-governance-v3.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-storage-v4
-            emulated-sender: SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y
-            path: ".cache/requirements/SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-storage-v4.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-oracle-v4
-            emulated-sender: SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y
-            path: ".cache/requirements/SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-oracle-v4.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-pnau-decoder-v3
-            emulated-sender: SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y
-            path: ".cache/requirements/SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.pyth-pnau-decoder-v3.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: wormhole-core-v4
-            emulated-sender: SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y
-            path: ".cache/requirements/SP1CGXWEAMG6P6FT04W66NVGJ7PQWMDAC19R7PJ0Y.wormhole-core-v4.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pyth-adapter-v1
-            emulated-sender: SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS
-            path: ".cache/requirements/SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS.pyth-adapter-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: withdrawal-caps-v1
-            emulated-sender: SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS
-            path: ".cache/requirements/SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS.withdrawal-caps-v1.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: borrower-v1
-            emulated-sender: SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS
-            path: ".cache/requirements/SP26NGV9AFZBX7XBDBS2C7EC7FCPSAV9PKREQNMVS.borrower-v1.clar"
-            clarity-version: 3
         - emulated-contract-publish:
             contract-name: redeeming-reserve
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: minting
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/minting-v1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: minting-auto-state
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/minting-auto-state-v1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: minting-auto-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/traits/minting-auto-trait-v1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: minting-auto
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/minting-auto-v1-2.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: staking-reserve
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/staking-reserve-v1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: staking-state
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/staking-state-v1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: staking-silo
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/staking-silo-v1-1.clar
             clarity-version: 3
-      epoch: "3.2"
-    - id: 6
-      transactions:
         - emulated-contract-publish:
             contract-name: staking-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/traits/staking-trait-v1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: staking
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/staking-v1-1.clar
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: staking-silo-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/traits/staking-silo-trait-v1.clar
             clarity-version: 3
       epoch: "3.2"
-    - id: 7
+    - id: 2
       transactions:
         - emulated-contract-publish:
-            contract-name: usdcx
-            emulated-sender: SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE
-            path: ".cache/requirements/SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: ft-trait
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.ft-trait.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: market-trait
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.market-trait.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-assets
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-assets.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-egroup
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-egroup.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-market-vault
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-market-vault.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: vault-traits
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-traits.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-vault-sbtc
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-vault-ststx
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-ststx.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-vault-ststxbtc
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-ststxbtc.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: wstx
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.wstx.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-vault-stx
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-stx.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-vault-usdc
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-usdc.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-vault-usdh
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-usdh.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-1-data
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-1-data.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
-            contract-name: v0-3-market
-            emulated-sender: SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7
-            path: ".cache/requirements/SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-3-market.clar"
-            clarity-version: 4
-        - emulated-contract-publish:
             contract-name: hq-hbtc
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/hq-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: blacklist
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/blacklist-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: token-hbtc
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/tokens/token-hbtc.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: state
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/state-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: reserve
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/reserve-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: reserve-fund
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/reserve-fund-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: controller-hbtc
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/controller-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: fee-collector
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/fee-collector-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: granite-borrower-trait-v1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/traits/granite-borrower-trait-v1.clar
             clarity-version: 4
-      epoch: "3.3"
-    - id: 8
-      transactions:
         - emulated-contract-publish:
             contract-name: granite-interface
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/interfaces/granite-interface-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: hermetica-interface
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/interfaces/hermetica-interface-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: minting-otc
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/usdh/protocol/minting-otc-v1-1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: vault-trait-v1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/traits/vault-trait-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: zest-interface
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/interfaces/zest-interface-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: trading
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
             path: mainnet/contracts/hbtc/protocol/trading-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: vault
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: mainnet/contracts/hbtc/protocol/vault-v1-1.clar
+            emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
+            path: mainnet/contracts/hbtc/protocol/vault-v1-2.clar
             clarity-version: 4
       epoch: "3.3"

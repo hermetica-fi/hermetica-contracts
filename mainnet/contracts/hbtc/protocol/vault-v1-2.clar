@@ -2,7 +2,7 @@
 ;; Copyright (c) 2026 Hermetica Labs, Inc.
 
 ;; @contract Vault
-;; @version 1.1
+;; @version 1.2
 ;; @description User interaction logic
 
 (impl-trait .vault-trait-v1.vault-trait)
@@ -179,6 +179,36 @@
 
     (print { action: "redeem-peg-out", user: contract-caller, data: { claim-id: claim-id, assets: assets, btc-recipient: btc-recipient, max-fee: max-fee } })
     (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-withdrawal initiate-withdrawal-request (- assets max-fee) btc-recipient max-fee)
+  )
+)
+
+(define-private (redeem-peg-out-iter (claim-id uint) (prev (response uint uint)))
+  (let (
+    (accum (try! prev))
+    (claim (try! (get-claim claim-id)))
+  )
+    (asserts! (is-eq tx-sender (get user claim)) ERR_NOT_AUTHORIZED)
+    (let ((assets-net (try! (redeem-internal claim-id))))
+      (ok (+ accum assets-net))
+    )
+  )
+)
+
+(define-public (redeem-peg-out-many
+  (claim-ids (list 1000 uint))
+  (btc-recipient { hashbytes: (buff 32), version: (buff 1) })
+  (max-fee uint))
+  (begin
+    (asserts! (> (len claim-ids) u0) ERR_EMPTY_LIST)
+    (asserts! (is-eq tx-sender contract-caller) ERR_SENDER_NOT_CALLER)
+    (try! (contract-call? .state check-is-redeem-enabled))
+    (let (
+      (total-assets-net (try! (fold redeem-peg-out-iter claim-ids (ok u0))))
+    )
+      (asserts! (>= total-assets-net max-fee) ERR_MAX_FEE)
+      (print { action: "redeem-peg-out-many", user: contract-caller, data: { claim-ids: claim-ids, total-assets: total-assets-net, btc-recipient: btc-recipient, max-fee: max-fee } })
+      (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-withdrawal initiate-withdrawal-request (- total-assets-net max-fee) btc-recipient max-fee)
+    )
   )
 )
 
