@@ -188,6 +188,16 @@ path = 'mainnet/contracts/usdh/protocol/emergency-recover-v1.clar'
 clarity_version = 2
 epoch = 2.5
 
+[contracts.dao-executor]
+path = 'mainnet/contracts/usdh/protocol/dao-contracts/dao-executor-v1.clar'
+clarity_version = 4
+epoch = 3.3
+
+[contracts.dao-multisig]
+path = 'mainnet/contracts/usdh/protocol/dao-contracts/dao-multisig-v1.clar'
+clarity_version = 4
+epoch = 3.3
+
 # usdh tokens (source: mainnet/contracts/)
 
 [contracts.susdh-token]
@@ -231,6 +241,11 @@ epoch = 3.2
 path = 'mainnet/contracts/usdh/traits/minting-auto-trait-v1.clar'
 clarity_version = 3
 epoch = 3.2
+
+[contracts.dao-traits]
+path = 'mainnet/contracts/usdh/traits/dao-traits-v1.clar'
+clarity_version = 4
+epoch = 3.3
 
 # hbtc protocol (source: mainnet/contracts/)
 
