@@ -492,7 +492,7 @@
 
 (define-public (set-mint-limit (new-mint-limit uint))
   (begin
-    (try! (contract-call? .hq check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol tx-sender))
     (asserts! (<= new-mint-limit max-mint-limit) ERR_ABOVE_MAX)
     (print { old-value: (get-mint-limit), new-value: new-mint-limit })
     (ok (var-set mint-limit new-mint-limit)))
@@ -500,7 +500,7 @@
 
 (define-public (set-mint-limit-reset-window (new-window uint))
   (begin
-    (try! (contract-call? .hq check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol tx-sender))
     (asserts! (>= new-window min-mint-limit-reset-window) ERR_BELOW_MIN)
     (print { old-value: (get-mint-limit-reset-window), new-value: new-window })
     (ok (var-set mint-limit-reset-window new-window)))
@@ -508,7 +508,7 @@
 
 (define-public (set-block-delay (new-amount uint))
   (begin
-    (try! (contract-call? .hq check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol tx-sender))
     (asserts! (<= new-amount max-block-delay) ERR_ABOVE_MAX)
     (asserts! (> new-amount u0) ERR_BELOW_MIN)
     (print { old-value: (get-block-delay), new-value: new-amount })
@@ -518,7 +518,7 @@
 
 (define-public (set-trader (address principal) (mint bool) (redeem bool))
   (begin
-    (try! (contract-call? .hq check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol tx-sender))
     (asserts! (is-standard address) ERR_NOT_STANDARD_PRINCIPAL)
     (print { address: address, old-values: (get-trader address), new-values: { minter: mint, redeemer: redeem } })
     (ok (map-set traders { address: address } { minter: mint, redeemer: redeem}))
@@ -527,7 +527,7 @@
 
 (define-public (set-custody-address (custody-address principal) (active bool))
   (begin
-    (try! (contract-call? .hq check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol tx-sender))
     (asserts! (is-standard custody-address) ERR_NOT_STANDARD_PRINCIPAL)
     (print { address: custody-address, old-value: (get-custody-address-active custody-address), new-value: active })
     (ok (map-set custody-addresses {address: custody-address} {active: active}))
@@ -539,7 +539,7 @@
     (token-address (contract-of token))
     (token-base (pow u10 (unwrap-panic (contract-call? token get-decimals))))
   )
-    (try! (contract-call? .hq check-is-protocol contract-caller))
+    (try! (contract-call? .hq check-is-protocol tx-sender))
     (asserts! (<= conf-tolerance-bps bps-base) ERR_MAX_CONF_TOO_HIGH)
     (if (check-is-supported-asset token-address)
       (print {
