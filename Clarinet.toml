@@ -160,13 +160,13 @@ epoch = 3.2
 
 [contracts.staking]
 path = 'mainnet/contracts/usdh/protocol/staking-v1-1.clar'
-clarity_version = 2
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.staking-silo]
 path = 'mainnet/contracts/usdh/protocol/staking-silo-v1-1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.staking-reserve]
 path = 'mainnet/contracts/usdh/protocol/staking-reserve-v1.clar'
@@ -175,8 +175,8 @@ epoch = 3.2
 
 [contracts.staking-state]
 path = 'mainnet/contracts/usdh/protocol/staking-state-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.blacklist-susdh]
 path = 'mainnet/contracts/usdh/protocol/blacklist-susdh-v1.clar'
