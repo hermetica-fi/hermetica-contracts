@@ -140,8 +140,8 @@ epoch = 3.3
 
 [contracts.minting]
 path = 'mainnet/contracts/usdh/protocol/minting-v1.clar'
-clarity_version = 3
-epoch = 3.2
+clarity_version = 4
+epoch = 3.3
 
 [contracts.minting-auto]
 path = 'mainnet/contracts/usdh/protocol/minting-auto-v1-2.clar'

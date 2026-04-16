@@ -33,7 +33,6 @@
 (define-constant ERR_ORACLE_CONF_TOO_LOW (err u2218))
 (define-constant ERR_NOT_STANDARD_PRINCIPAL (err u2219))
 
-(define-constant this-contract (as-contract tx-sender))
 (define-constant bps-base (pow u10 u4))
 (define-constant price-base (pow u10 u8))
 (define-constant usdh-base (pow u10 u8))
@@ -41,7 +40,7 @@
 
 (define-constant max-mint-limit (* u250000 usdh-base))
 (define-constant min-mint-limit-reset-window u3600)
-(define-constant max-block-delay u10)
+(define-constant max-staleness-window u120)
 
 ;;-------------------------------------
 ;; Variables
@@ -54,7 +53,7 @@
 (define-data-var current-mint-limit uint (* u100000 usdh-base))
 (define-data-var mint-limit-reset-window uint u3600)
 (define-data-var last-mint-limit-reset uint u0)
-(define-data-var block-delay uint u1)
+(define-data-var staleness-window uint u30)
 
 ;;-------------------------------------
 ;; Maps
@@ -147,8 +146,8 @@
   (var-get last-mint-limit-reset)
 )
 
-(define-read-only (get-block-delay)
-  (var-get block-delay)
+(define-read-only (get-staleness-window)
+  (var-get staleness-window)
 )
 
 (define-read-only (get-trader (address principal))
@@ -245,7 +244,6 @@
     (amount-usdh-requested (/ (* amount-asset price usdh-base) price-base token-base))
     (oracle-data (unwrap-panic (element-at (try! (contract-call? 'SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-oracle-v3 decode-price-feeds price-feed-bytes execution-plan)) u0)))
     (oracle-timestamp (get publish-time oracle-data))
-    (block-timestamp (unwrap-panic (get-stacks-block-info? time (- stacks-block-height (var-get block-delay)))))
     (state (contract-call? .minting-state get-request-mint-state contract-caller))
   )
     (try! (contract-call? .hq check-is-enabled))
@@ -261,11 +259,11 @@
       true
     )
     (asserts! (<= amount-usdh-requested (get-current-mint-limit)) ERR_MINT_LIMIT_EXCEEDED)
-    (asserts! (> oracle-timestamp block-timestamp) ERR_STALE_DATA)
+    (asserts! (>= oracle-timestamp (- stacks-block-time (var-get staleness-window))) ERR_STALE_DATA)
     (asserts! (>= amount-usdh-requested (get min-amount-usdh state)) ERR_BELOW_MIN)
     (asserts! (<= slippage bps-base) ERR_ABOVE_MAX)
 
-    (try! (contract-call? minting-asset transfer amount-asset contract-caller this-contract none))
+    (try! (contract-call? minting-asset transfer amount-asset contract-caller current-contract none))
 
     (map-set mint-requests { request-id: next-mint-id }
       {
@@ -294,7 +292,7 @@
     (asserts! (> burn-block-height (+ (get block-height mint-request) (contract-call? .minting-state get-mint-confirmation-window))) ERR_CONFIRMATION_OPEN)
     (asserts! (is-eq (get minting-asset mint-request) (contract-of minting-asset-entry)) ERR_ASSET_MISMATCH)
 
-    (try! (contract-call? minting-asset-entry transfer (get amount-asset mint-request) this-contract (get requester mint-request) none))
+    (try! (contract-call? minting-asset-entry transfer (get amount-asset mint-request) current-contract (get requester mint-request) none))
     (ok (map-delete mint-requests { request-id: (get request-id entry)}))
   )
 )
@@ -319,7 +317,6 @@
     (amount-asset-requested (/ (* amount-usdh price-base token-base) price usdh-base))
     (oracle-data (unwrap-panic (element-at (try! (contract-call? 'SP3R4F6C1J3JQWWCVZ3S7FRRYPMYG6ZW6RZK31FXY.pyth-oracle-v3 decode-price-feeds price-feed-bytes execution-plan)) u0)))
     (oracle-timestamp (get publish-time oracle-data))
-    (block-timestamp (unwrap-panic (get-stacks-block-info? time (- stacks-block-height (var-get block-delay)))))
     (state (contract-call? .minting-state get-request-redeem-state contract-caller))
   )
     (try! (contract-call? .hq check-is-enabled))
@@ -327,11 +324,11 @@
     (asserts! (get whitelisted state) ERR_NOT_WHITELISTED)
     (asserts! (check-is-supported-asset redeeming-asset-contract) ERR_NOT_SUPPORTED_ASSET)
     (try! (verify-price price conf-tolerance-bps oracle-data redeeming-asset-contract))
-    (asserts! (> oracle-timestamp block-timestamp) ERR_STALE_DATA)
+    (asserts! (>= oracle-timestamp (- stacks-block-time (var-get staleness-window))) ERR_STALE_DATA)
     (asserts! (>= amount-usdh (get min-amount-usdh state)) ERR_BELOW_MIN)
     (asserts! (<= slippage bps-base) ERR_ABOVE_MAX)
 
-    (try! (contract-call? .usdh-token transfer amount-usdh contract-caller this-contract none))
+    (try! (contract-call? .usdh-token transfer amount-usdh contract-caller current-contract none))
 
     (map-set redeem-requests { request-id: next-redeem-id }
       {
@@ -357,7 +354,7 @@
   )
     (asserts! (> burn-block-height (+ (get block-height redeem-request) (contract-call? .minting-state get-redeem-confirmation-window))) ERR_CONFIRMATION_OPEN)
 
-    (try! (contract-call? .usdh-token transfer (get amount-usdh redeem-request) this-contract (get requester redeem-request) none))
+    (try! (contract-call? .usdh-token transfer (get amount-usdh redeem-request) current-contract (get requester redeem-request) none))
     (ok (map-delete redeem-requests { request-id: redeem-id }))
   )
 )
@@ -394,10 +391,10 @@
 
     (try! (contract-call? .usdh-token mint-for-protocol amount-usdh-confirmed requester))
     (if (> amount-usdh-fee u0) (try! (contract-call? .usdh-token mint-for-protocol amount-usdh-fee fee-address)) true)
-    (try! (contract-call? minting-asset transfer (- amount-asset-confirmed amount-asset-fee) this-contract custody-address memo))
-    (if (> amount-asset-fee u0) (try! (contract-call? minting-asset transfer amount-asset-fee this-contract fee-address none)) true)
+    (try! (contract-call? minting-asset transfer (- amount-asset-confirmed amount-asset-fee) current-contract custody-address memo))
+    (if (> amount-asset-fee u0) (try! (contract-call? minting-asset transfer amount-asset-fee current-contract fee-address none)) true)
     (if (not (is-eq amount-asset-requested amount-asset-confirmed))
-      (try! (contract-call? minting-asset transfer (- amount-asset-requested amount-asset-confirmed) this-contract requester none))
+      (try! (contract-call? minting-asset transfer (- amount-asset-requested amount-asset-confirmed) current-contract requester none))
       true
     )
 
@@ -425,7 +422,7 @@
     (asserts! (get minter (get-trader contract-caller)) ERR_NOT_ALLOWED)
     (asserts! (is-eq (get minting-asset mint-request) (contract-of minting-asset-entry)) ERR_ASSET_MISMATCH)
 
-    (try! (contract-call? minting-asset-entry transfer amount-asset this-contract (get requester mint-request) none))
+    (try! (contract-call? minting-asset-entry transfer amount-asset current-contract (get requester mint-request) none))
     (map-delete mint-requests { request-id: (get request-id entry) })
     (ok (if (<= new-mint-limit (get-mint-limit)) (var-set current-mint-limit new-mint-limit) (var-set current-mint-limit (get-mint-limit))))
   )
@@ -457,10 +454,10 @@
 
     (try! (contract-call? .redeeming-reserve transfer amount-asset-confirmed requester redeeming-asset memo))
     (if (> amount-asset-fee u0) (try! (contract-call? .redeeming-reserve transfer amount-asset-fee fee-address redeeming-asset none)) true)
-    (try! (contract-call? .usdh-token burn-for-protocol (- amount-usdh-confirmed amount-usdh-fee) this-contract))
-    (if (> amount-usdh-fee u0) (try! (contract-call? .usdh-token transfer amount-usdh-fee this-contract fee-address none)) true)
+    (try! (contract-call? .usdh-token burn-for-protocol (- amount-usdh-confirmed amount-usdh-fee) current-contract))
+    (if (> amount-usdh-fee u0) (try! (contract-call? .usdh-token transfer amount-usdh-fee current-contract fee-address none)) true)
     (if (not (is-eq amount-usdh-requested amount-usdh-confirmed))
-      (try! (contract-call? .usdh-token transfer (- amount-usdh-requested amount-usdh-confirmed) this-contract requester none))
+      (try! (contract-call? .usdh-token transfer (- amount-usdh-requested amount-usdh-confirmed) current-contract requester none))
       true
     )
 
@@ -481,7 +478,7 @@
     (asserts! (contract-call? .minting-state get-redeem-enabled) ERR_TRADING_DISABLED)
     (asserts! (get redeemer (get-trader contract-caller)) ERR_NOT_ALLOWED)
 
-    (try! (contract-call? .usdh-token transfer (get amount-usdh redeem-request) this-contract (get requester redeem-request) none))
+    (try! (contract-call? .usdh-token transfer (get amount-usdh redeem-request) current-contract (get requester redeem-request) none))
     (ok (map-delete redeem-requests { request-id: request-id }))
   )
 )
@@ -506,13 +503,13 @@
     (ok (var-set mint-limit-reset-window new-window)))
 )
 
-(define-public (set-block-delay (new-amount uint))
+(define-public (set-staleness-window (new-staleness-window uint))
   (begin
     (try! (contract-call? .hq check-is-protocol contract-caller))
-    (asserts! (<= new-amount max-block-delay) ERR_ABOVE_MAX)
-    (asserts! (> new-amount u0) ERR_BELOW_MIN)
-    (print { old-value: (get-block-delay), new-value: new-amount })
-    (ok (var-set block-delay new-amount))
+    (asserts! (<= new-staleness-window max-staleness-window) ERR_ABOVE_MAX)
+    (asserts! (> new-staleness-window u0) ERR_BELOW_MIN)
+    (print { old-value: (get-staleness-window), new-value: new-staleness-window })
+    (ok (var-set staleness-window new-staleness-window))
   )
 )
 
