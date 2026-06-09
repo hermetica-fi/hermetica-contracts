@@ -1,0 +1,2 @@
+; Remove the following line to fix the Subdomain Takeover vulnerability
+; alpha.hermetica.fi. IN CNAME vercel-deployment-url
