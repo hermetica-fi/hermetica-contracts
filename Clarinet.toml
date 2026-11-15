@@ -270,7 +270,7 @@ clarity_version = 4
 epoch = 3.3
 
 [contracts.trading]
-path = 'mainnet/contracts/hbtc/protocol/trading-v1.clar'
+path = 'mainnet/contracts/hbtc/deprecated/trading-v1.clar'
 clarity_version = 4
 epoch = 3.3
 
@@ -287,7 +287,7 @@ clarity_version = 4
 epoch = 3.3
 
 [contracts.zest-interface]
-path = 'mainnet/contracts/hbtc/protocol/interfaces/zest-interface-v1.clar'
+path = 'mainnet/contracts/hbtc/deprecated/zest-interface-v1.clar'
 clarity_version = 4
 epoch = 3.3
 

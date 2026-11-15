@@ -242,12 +242,12 @@ plan:
         - emulated-contract-publish:
             contract-name: zest-interface
             emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
-            path: mainnet/contracts/hbtc/protocol/interfaces/zest-interface-v1.clar
+            path: mainnet/contracts/hbtc/deprecated/zest-interface-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: trading
             emulated-sender: SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R
-            path: mainnet/contracts/hbtc/protocol/trading-v1.clar
+            path: mainnet/contracts/hbtc/deprecated/trading-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: vault
