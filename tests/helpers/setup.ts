@@ -50,9 +50,11 @@ export const reserveFund = contracts.reserveFund;
 export const feeCollector = contracts.feeCollector;
 export const blacklist = contracts.blacklist;
 export const trading = contracts.trading;
+export const tradingV2 = contracts.tradingV2;
 
 // Interface contracts
 export const zestInterface = contracts.zestInterface;
+export const zestInterfaceV2 = contracts.zestInterfaceV2;
 export const hermeticaInterface = contracts.hermeticaInterface;
 export const graniteInterface = contracts.graniteInterface;
 
@@ -70,8 +72,8 @@ export const hqUsdh = contracts.hq;
 // sBTC token address (mainnet contract)
 export const sbtcTokenAddress = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 
-// Mainnet wallet with sBTC for funding test wallets
-export const sbtcFundingWallet = 'SM35BNE8A592DRTQ7XVF1T3KY37XEZTPGGDC8EQYP';
+// Mainnet wallet with sBTC for funding test wallets (holds ~42 sBTC at the fork height)
+export const sbtcFundingWallet = 'SM3WXM7T41Q3WD7A1JW9RW31VHG2PA9PJTQCMPBX7';
 
 // Protocol constants
 export const SHARE_BASE = 100_000_000n;  // 10^8
@@ -157,7 +159,7 @@ export const ERR = {
 };
 
 // Blocks to mine to pass the 86400-second timelock (~1 day, ~523s/block in simnet)
-const TIMELOCK_BLOCKS = 170;
+export const TIMELOCK_BLOCKS = 170;
 
 /**
  * Mine blocks to advance time
@@ -174,12 +176,12 @@ export function mineBlocks(n: number) {
 export function fundTestWalletsWithSBTC() {
   const walletsToFund = [user1, user2, user3, manager, rewarder, deployer];
 
-  // First transfer a large amount to deployer from the funding wallet
+  // First transfer to deployer from the funding wallet
   const initialTransfer = simnet.callPublicFn(
     sbtcTokenAddress,
     'transfer',
     [
-      Cl.uint(1000n * ONE_BTC), // 1000 BTC
+      Cl.uint(40n * ONE_BTC), // 40 BTC
       Cl.principal(sbtcFundingWallet),
       Cl.principal(deployer),
       Cl.none(),
@@ -195,7 +197,7 @@ export function fundTestWalletsWithSBTC() {
       sbtcTokenAddress,
       'transfer',
       [
-        Cl.uint(100n * ONE_BTC), // 100 BTC each
+        Cl.uint(5n * ONE_BTC), // 5 BTC each
         Cl.principal(deployer),
         Cl.principal(wallet),
         Cl.none(),
@@ -211,6 +213,7 @@ const SBTC_TOKEN = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const USDH_TOKEN = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1';
 const SUSDH_TOKEN = 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.susdh-token-v1';
 const ZEST_VAULT_SBTC = 'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc';
+const USDCX_TOKEN = 'SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx';
 
 // Price feed IDs (Pyth oracle)
 const SBTC_PRICE_FEED = Uint8Array.from(
@@ -218,6 +221,7 @@ const SBTC_PRICE_FEED = Uint8Array.from(
 );
 const USDH_PRICE_FEED = Uint8Array.from([0x01]);
 const SUSDH_PRICE_FEED = Uint8Array.from([0x02]);
+const USDCX_PRICE_FEED = Uint8Array.from([0x03]);
 
 /**
  * Initialize protocol for testing
@@ -234,6 +238,7 @@ const SUSDH_PRICE_FEED = Uint8Array.from([0x02]);
  */
 export function initProtocol() {
   const tradingContract = `${deployer}.trading`;
+  const tradingV2Contract = `${deployer}.trading-v2`;
 
   // ---- Batch all timelocked requests ----
 
@@ -242,16 +247,19 @@ export function initProtocol() {
 
   txOk(hqHbtc.requestTraderUpdate(trader, true), deployer);
   txOk(hqHbtc.requestTraderUpdate(tradingContract, true), deployer);
+  txOk(hqHbtc.requestTraderUpdate(tradingV2Contract, true), deployer);
 
   txOk(hqHbtc.requestRewarderUpdate(rewarder, true), deployer);
   txOk(hqHbtc.requestRewarderUpdate(tradingContract, true), deployer);
 
   txOk(hqHbtc.requestManagerUpdate(manager, true), deployer);
   txOk(hqHbtc.requestManagerUpdate(tradingContract, true), deployer);
+  txOk(hqHbtc.requestManagerUpdate(tradingV2Contract, true), deployer);
 
   const protocolContracts = [
     'controller-hbtc', 'vault', 'state', 'reserve',
     'reserve-fund', 'fee-collector', 'zest-interface', 'hermetica-interface',
+    'zest-interface-v2',
   ];
   for (const name of protocolContracts) {
     txOk(hqHbtc.requestProtocolUpdate(`${deployer}.${name}`, true), deployer);
@@ -264,6 +272,7 @@ export function initProtocol() {
   txOk(state.requestAssetAdd(SBTC_TOKEN, SBTC_PRICE_FEED, 8n, 500n, false), deployer);
   txOk(state.requestAssetAdd(USDH_TOKEN, USDH_PRICE_FEED, 8n, 500n, true), deployer);
   txOk(state.requestAssetAdd(SUSDH_TOKEN, SUSDH_PRICE_FEED, 8n, 500n, false), deployer);
+  txOk(state.requestAssetAdd(USDCX_TOKEN, USDCX_PRICE_FEED, 6n, 500n, true), deployer);
 
   // State external requests
   const externals = [
@@ -273,6 +282,9 @@ export function initProtocol() {
     'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0',
     'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-v1-1',
     'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.staking-silo-v1-1',
+    // trading-v2 / zest-interface-v2
+    'SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-8-market',
+    'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.minting-auto-v1-2',
   ];
   for (const ext of externals) {
     txOk(state.requestExternalAdd(ext), deployer);
@@ -288,12 +300,14 @@ export function initProtocol() {
 
   txOk(hqHbtc.confirmTraderRequest(trader), deployer);
   txOk(hqHbtc.confirmTraderRequest(tradingContract), deployer);
+  txOk(hqHbtc.confirmTraderRequest(tradingV2Contract), deployer);
 
   txOk(hqHbtc.confirmRewarderRequest(rewarder), deployer);
   txOk(hqHbtc.confirmRewarderRequest(tradingContract), deployer);
 
   txOk(hqHbtc.confirmManagerRequest(manager), deployer);
   txOk(hqHbtc.confirmManagerRequest(tradingContract), deployer);
+  txOk(hqHbtc.confirmManagerRequest(tradingV2Contract), deployer);
 
   for (const name of protocolContracts) {
     txOk(hqHbtc.confirmProtocolRequest(`${deployer}.${name}`), deployer);
@@ -303,6 +317,7 @@ export function initProtocol() {
   txOk(state.confirmAssetRequest(SBTC_TOKEN), deployer);
   txOk(state.confirmAssetRequest(USDH_TOKEN), deployer);
   txOk(state.confirmAssetRequest(SUSDH_TOKEN), deployer);
+  txOk(state.confirmAssetRequest(USDCX_TOKEN), deployer);
 
   // Confirm state external additions
   for (const ext of externals) {
