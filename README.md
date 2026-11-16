@@ -11,7 +11,7 @@ Production Clarity contracts and audit reports:
 
 ### tests/
 **For Security Researchers:**
-- Complete test suite with 115 tests across vault, controller, trading, and interface contracts
+- Complete test suite with 136 tests across vault, controller, trading, and interface contracts
 - Mainnet fork testing with real Zest and Hermetica integrations
 - Protocol initialization via timelocked governance flows (matching the on-chain process)
 - TypeScript types via Clarigen
@@ -50,16 +50,30 @@ For security research, focus on:
 | `reserve-fund-v1.clar` | Loss absorption buffer |
 | `fee-collector-v1.clar` | Collects and distributes fees |
 | `blacklist-v1.clar` | Dual-level (soft/full) address restriction management |
-| `trading-v1.clar` | Atomic DeFi position management |
+| `trading-v2.clar` | Atomic DeFi position management |
 | `token-hbtc.clar` | SIP-010 hBTC token (shares) |
 
 ## External Interfaces
 
 | Contract | Integration | Purpose |
 |----------|-------------|---------|
-| `zest-interface-v1.clar` | Zest Protocol v2 | Collateral management, borrowing stablecoins |
+| `zest-interface-v2.clar` | Zest Protocol (`v0-8-market`) | Collateral management, borrowing stablecoins |
 | `hermetica-interface-v1.clar` | Hermetica USDh | Stake/unstake sUSDh for yield, mint/redeem USDh |
 | `granite-interface-v1.clar` | Granite Protocol | Collateral management, borrowing stablecoins |
+
+Retired contracts, such as `trading-v1.clar` and `zest-interface-v1.clar`, are kept in `mainnet/contracts/*/deprecated/`.
+
+## Contract Names
+
+Active sources refer to other contracts by their Clarinet names (see `Clarinet.toml`), not their deployed names. For `trading-v2.clar` and `zest-interface-v2.clar`, reversing these renames reproduces the deployed source exactly:
+
+| Clarinet name | Deployed contract (`SP1S1HSFH0SQQGWKB69EYFNY0B1MHRMGXR3J1FH4D`) |
+|---------------|------------------|
+| `.hq-hbtc` | `.hq-v1` |
+| `.state` | `.state-hbtc-v1` |
+| `.reserve` | `.reserve-hbtc-v1` |
+| `.hermetica-interface` | `.hermetica-interface-hbtc-v1` |
+| `.zest-interface-v2` | `.zest-interface-hbtc-v2` |
 
 ## Protocol Flows
 
@@ -96,7 +110,7 @@ Close Position: zest-close-remove() → Unstake sUSDh → Repay loan → Remove 
 ### Prerequisites
 - [Clarinet](https://github.com/stx-labs/clarinet) - Clarity development environment
 - [Clarigen](https://github.com/mechanismHQ/clarigen) - TypeScript type generator
-- Node.js v18+
+- Node.js v20+
 - [Hiro API Key](https://platform.hiro.so/) - Required for mainnet fork testing
 
 ### Setup
@@ -126,10 +140,12 @@ npm test -- -t "should successfully"        # Run tests matching pattern
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
-| `vault.test.ts` | 45 | Deposit, request-redeem, fund-claim, redeem, cancel, express |
-| `controller.test.ts` | 20 | Log-reward (positive/negative), rate limiting, edge cases |
-| `trading.test.ts` | 16 | Open/close positions, Zest+Hermetica integration |
-| `zest-interface.test.ts` | 24 | Collateral add/remove, borrow/repay, vault operations |
+| `vault.test.ts` | 22 | Deposit, request-redeem, fund-claim, redeem, cancel, express |
+| `controller.test.ts` | 10 | Log-reward (positive/negative), rate limiting, edge cases |
+| `trading-v2.test.ts` | 22 | USDCx and USDh open/close through Zest `v0-8-market` and Hermetica, claim funding, rollback, role checks |
+| `zest-interface-v2.test.ts` | 32 | Collateral add/remove, USDCx borrow/repay, Lazer price updates, oracle fee allowance |
+| `trading.test.ts` | 16 | Deprecated v1: open/close positions, Zest+Hermetica integration (4 skipped) |
+| `zest-interface.test.ts` | 24 | Deprecated v1: collateral add/remove, borrow/repay, vault operations (4 skipped) |
 | `hermetica-interface.test.ts` | 10 | Stake/unstake/withdraw, sweep, authorization |
 
 ### Happy Path Tests
@@ -216,10 +232,10 @@ Tests run directly against the **production contracts** in `mainnet/contracts/` 
 
 ## Mainnet Fork Testing
 
-Tests run against a **mainnet fork** at block height 6316137, enabling:
+Tests run against a **mainnet fork** at block height 8884000, enabling:
 - Real Zest Protocol v2 market integration
 - Real Hermetica USDh staking contracts
-- Pyth oracle price feeds
+- Pyth Lazer price updates (recorded signed payloads in `tests/helpers/recordedPrices.json`)
 - DIA oracle for USDh pricing
 
 This allows testing actual cross-protocol interactions without mocking.
