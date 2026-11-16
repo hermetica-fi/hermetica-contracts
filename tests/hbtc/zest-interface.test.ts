@@ -133,7 +133,8 @@ describe('Zest Interface Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.TRADING_DISABLED));
     });
 
-    it('should successfully add collateral to Zest market', () => {
+    // Skipped: deprecated v1 contract; at the fork height the Zest market vault only accepts v0-8-market (err u600001).
+    it.skip('should successfully add collateral to Zest market', () => {
       const amount = ONE_BTC / 100n;
 
       const result = simnet.callPublicFn(
@@ -189,7 +190,8 @@ describe('Zest Interface Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.ZEST_INVALID_AMOUNT));
     });
 
-    it('should successfully remove collateral from Zest market', async () => {
+    // Skipped: deprecated v1 contract; depends on the retired Pyth Hermes price API.
+    it.skip('should successfully remove collateral from Zest market', async () => {
       // Fetch BTC price feed from Pyth using simnet's block time
       const timestamp = getSimnetBlockTimestamp();
       const priceFeed = await getOraclePriceFeed(timestamp, 'btc');
@@ -264,7 +266,8 @@ describe('Zest Interface Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.ZEST_INVALID_AMOUNT));
     });
 
-    it('should successfully borrow from Zest market', async () => {
+    // Skipped: deprecated v1 contract; depends on the retired Pyth Hermes price API.
+    it.skip('should successfully borrow from Zest market', async () => {
       // Fetch BTC price feed from Pyth using simnet's block time
       const timestamp = getSimnetBlockTimestamp();
       const priceFeed = await getOraclePriceFeed(timestamp, 'btc');
@@ -340,7 +343,8 @@ describe('Zest Interface Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.ZEST_INVALID_AMOUNT));
     });
 
-    it('should successfully repay to Zest market', async () => {
+    // Skipped: deprecated v1 contract; depends on the retired Pyth Hermes price API.
+    it.skip('should successfully repay to Zest market', async () => {
       // Fetch BTC price feed from Pyth using simnet's block time
       const timestamp = getSimnetBlockTimestamp();
       const priceFeed = await getOraclePriceFeed(timestamp, 'btc');

@@ -166,7 +166,8 @@ describe('Trading Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
-    it('should successfully add collateral, borrow and stake', async () => {
+    // Skipped: deprecated v1 contract; depends on the retired Pyth Hermes price API.
+    it.skip('should successfully add collateral, borrow and stake', async () => {
       // Fetch BTC price feed from Pyth using simnet's block time
       const timestamp = getSimnetBlockTimestamp();
       const priceFeed = await getOraclePriceFeed(timestamp, 'btc');
@@ -276,7 +277,8 @@ describe('Trading Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
-    it('should successfully unstake, repay and remove collateral', async () => {
+    // Skipped: deprecated v1 contract; depends on the retired Pyth Hermes price API.
+    it.skip('should successfully unstake, repay and remove collateral', async () => {
       // Step 1: Open a position first (add collateral, borrow, stake)
       const timestamp = getSimnetBlockTimestamp();
       const priceFeed = await getOraclePriceFeed(timestamp, 'btc');
@@ -379,7 +381,8 @@ describe('Trading Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
-    it('should successfully borrow and stake', async () => {
+    // Skipped: deprecated v1 contract; depends on the retired Pyth Hermes price API.
+    it.skip('should successfully borrow and stake', async () => {
       // Fetch BTC price feed from Pyth using simnet's block time
       const timestamp = getSimnetBlockTimestamp();
       const priceFeed = await getOraclePriceFeed(timestamp, 'btc');
@@ -465,7 +468,8 @@ describe('Trading Contract', () => {
       expect(result.result).toBeErr(Cl.uint(ERR.TRADING_INVALID_AMOUNT));
     });
 
-    it('should successfully unstake and repay', async () => {
+    // Skipped: deprecated v1 contract; depends on the retired Pyth Hermes price API.
+    it.skip('should successfully unstake and repay', async () => {
       // Step 1: Open a position first (add collateral, borrow, stake)
       const timestamp = getSimnetBlockTimestamp();
       const priceFeed = await getOraclePriceFeed(timestamp, 'btc');

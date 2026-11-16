@@ -10,7 +10,7 @@
 
 (define-constant ERR_INVALID_AMOUNT (err u111001))
 
-(define-constant reserve .reserve-hbtc-v1)
+(define-constant reserve .reserve)
 
 (define-constant max-oracle-fee u1000000)
 
@@ -26,7 +26,7 @@
   (begin
     (try! (execute-checks (contract-of market) (contract-of asset) amount))
 
-    (try! (contract-call? .reserve-hbtc-v1 transfer asset amount current-contract))
+    (try! (contract-call? .reserve transfer asset amount current-contract))
 
     (let ((total (try! (as-contract? ((with-ft (contract-of asset) "*" amount) (with-stx max-oracle-fee))
       (try! (contract-call? market collateral-add asset amount price-feeds))
@@ -78,7 +78,7 @@
   (begin
     (try! (execute-checks (contract-of market) (contract-of asset) amount))
 
-    (try! (contract-call? .reserve-hbtc-v1 transfer asset amount current-contract))
+    (try! (contract-call? .reserve transfer asset amount current-contract))
 
     (let (
       (repaid-amount (try! (as-contract?
@@ -103,8 +103,8 @@
 
 (define-public (sweep (asset <ft>) (amount uint))
   (begin
-    (try! (contract-call? .hq-v1 check-is-trader contract-caller))
-    (try! (contract-call? .state-hbtc-v1 check-is-asset (contract-of asset)))
+    (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
+    (try! (contract-call? .state check-is-asset (contract-of asset)))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     (try! (as-contract?
       ((with-ft (contract-of asset) "*" amount))
@@ -121,8 +121,8 @@
 
 (define-private (execute-checks (market principal) (asset principal) (amount uint))
   (begin
-    (try! (contract-call? .hq-v1 check-is-trader contract-caller))
-    (try! (contract-call? .state-hbtc-v1 check-trading-auth market none (some asset) none))
+    (try! (contract-call? .hq-hbtc check-is-trader contract-caller))
+    (try! (contract-call? .state check-trading-auth market none (some asset) none))
     (ok (asserts! (> amount u0) ERR_INVALID_AMOUNT))
   )
 )
