@@ -397,6 +397,10 @@ export function getLazerPriceFeeds() {
     if (step <= 0n) throw new Error('Simnet block time did not advance');
     if (now < update.published) {
       simnet.mineEmptyStacksBlocks(Number((update.published - now + step - 1n) / step));
+      now = simnet.getBlockTime();
+    }
+    if (now < update.published || now > update.published + 15n) {
+      throw new Error(`Simnet (${now}) missed the 15 s window of the Lazer update published at ${update.published}`);
     }
   }
   return Cl.some(Cl.list([Cl.bufferFromHex(update.hex)]));

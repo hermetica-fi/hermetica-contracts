@@ -144,12 +144,13 @@ describe('Zest Interface v2 Contract', () => {
       expect(collateral()).toBe(before.collateral);
     });
 
-    it('should pay the governed oracle fee from the interface STX balance', () => {
+    it('should borrow at the forked oracle fee without spending interface STX', () => {
       addCollateral();
       const feeResult = simnet.callReadOnlyFn(ORACLE, 'get-fee', [], deployer).result;
       expect(feeResult).toHaveClarityType(ClarityType.UInt);
+      // The fee is 0 at the fork; the next two tests cover non-zero fees.
       const fee = BigInt(cvToValue(feeResult));
-      expect(fee).toBeLessThanOrEqual(1_000_000n);
+      expect(fee).toBe(0n);
       ok(simnet.transferSTX(2_000_000, INTERFACE, deployer));
       const before = stxBalance(INTERFACE);
       ok(iface('zest-borrow', C, getLazerPriceFeeds()));
@@ -177,7 +178,8 @@ describe('Zest Interface v2 Contract', () => {
       expect(stxBalance(INTERFACE)).toBe(2_000_000n);
       setOracleFee(1_000_001n);
       const before = snapshot();
-      expect(iface('zest-borrow', C, getLazerPriceFeeds()).result).toHaveClarityType(ClarityType.ResponseErr);
+      // as-contract? returns the index of the violated allowance: u0 is `with-stx max-oracle-fee`.
+      expect(iface('zest-borrow', C, getLazerPriceFeeds()).result).toBeErr(Cl.uint(0));
       expect(snapshot()).toEqual(before);
       expect(stxBalance(INTERFACE)).toBe(2_000_000n);
     });
